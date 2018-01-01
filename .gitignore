@@ -1,2 +1,9 @@
-# Created by .ignore support plugin (hsz.mobi)
-
+.idea/
+gradle/
+lib/
+.gradle/
+classcloak.iml
+classcloak.ipr
+classcloak.iws
+gradlew.bat
+gradlew
