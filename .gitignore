@@ -7,3 +7,6 @@ classcloak.ipr
 classcloak.iws
 gradlew.bat
 gradlew
+out/
+run/Decompiler.exe
+run/*.jar

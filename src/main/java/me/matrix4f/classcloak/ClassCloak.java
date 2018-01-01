@@ -37,7 +37,7 @@ public class ClassCloak {
         OptionSet optionSet = parser.parse(args);
 
         if(!optionSet.has(scriptPathOption))
-            LOGGER.fatal("Run program with --script <scriptFilePath>.");
+            LOGGER.fatal("Run program with java -jar classcloak.jar -script <scriptFilePath>.");
 
         File scriptFile = new File(optionSet.valueOf(scriptPathOption));
         if(!scriptFile.exists())
