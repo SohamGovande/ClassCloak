@@ -4,18 +4,6 @@ public class Node {
 
     private Node parent, child;
 
-
-    static {
-        switch (3) {
-            case 0:
-                break;
-            case 1:
-                break;
-            case 3:
-                break;
-        }
-    }
-
     public Node add() {
         if(child == null)
             child = new Node();

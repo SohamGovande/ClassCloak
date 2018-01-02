@@ -3,7 +3,6 @@ package me.matrix4f.classcloak.util;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import sun.management.snmp.jvmmib.JvmMemMgrPoolRelTableMeta;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -100,7 +99,7 @@ public class BytecodeUtils {
                 .forEach(insn -> insn.accept(mv));
     }
 
-    public static String nameToDescNoL(String name) {
+    public static String convertTypeNameToDescriptorWithoutPrecedingL(String name) {
         StringBuilder builder = new StringBuilder(name);
         int arrays = 0;
         int arrayIndex;
@@ -126,28 +125,28 @@ public class BytecodeUtils {
         return desc.toString();
     }
 
-    public static String getInternalName(String desc) {
+    public static String getInternalNameOfDescriptor(String desc) {
         desc = desc.replace("[","");
         if(desc.length() == 1)
             return null;
         return desc.substring(1,desc.length()-1);
     }
 
-    public static List<String> getInternalNames(String methodDesc) {
+    public static List<String> getInternalNamesUsedByMethodSignature(String methodDesc) {
         Type[] types = Type.getArgumentTypes(methodDesc);
         Type returnType = Type.getReturnType(methodDesc);
         List<String> internalNames = Stream.of(types)
                 .map(Type::getDescriptor)
-                .map(BytecodeUtils::getInternalName)
+                .map(BytecodeUtils::getInternalNameOfDescriptor)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-        String returnTypeName = getInternalName(returnType.getDescriptor());
+        String returnTypeName = getInternalNameOfDescriptor(returnType.getDescriptor());
         if(returnTypeName != null)
             internalNames.add(returnTypeName);
         return internalNames;
     }
 
-    public static String nameToDesc(String name) {
+    public static String convertTypeNameToDescriptor(String name) {
         StringBuilder builder = new StringBuilder(name);
         int arrays = 0;
         int arrayIndex;
@@ -173,7 +172,7 @@ public class BytecodeUtils {
         return desc.toString();
     }
 
-    public static int dimensionArrayCountInExternal(String externalname) {
+    public static int getArrayDimensionsInJavaName(String externalname) {
         StringBuilder builder = new StringBuilder(externalname);
         int arrays = 0;
         int arrayIndex;
@@ -184,7 +183,7 @@ public class BytecodeUtils {
         return arrays;
     }
 
-    public static int dimensionArrayCountInInternal(String desc) {
+    public static int getArrayDimensionsInDescriptor(String desc) {
         int arrays = 0;
         while(desc.charAt(0) == '[') {
             desc = desc.substring(1);
@@ -193,26 +192,26 @@ public class BytecodeUtils {
         return arrays;
     }
 
-    public static String realName(ClassNode cn) {
+    public static String getJavaName(ClassNode cn) {
         return cn.name.replace('/','.');
     }
 
-    public static String methodDescToName(String desc) {
+    public static String convertMethodDescriptorToReadable(String desc) {
         StringBuilder sb = new StringBuilder("(");
         Stream.of(Type.getArgumentTypes(desc))
                 .map(Type::getDescriptor)
-                .map(BytecodeUtils::descToName)
+                .map(BytecodeUtils::convertDescriptorToJavaName)
                 .forEach(s -> sb.append(s).append(", "));
         if(sb.toString().endsWith(", ")) {
             sb.deleteCharAt(sb.length() - 1);
             sb.deleteCharAt(sb.length() - 1);
         }
         sb.append(')');
-        sb.append(descToName(Type.getReturnType(desc).getDescriptor()));
+        sb.append(convertDescriptorToJavaName(Type.getReturnType(desc).getDescriptor()));
         return sb.toString();
     }
 
-    public static String descToName(String desc) {
+    public static String convertDescriptorToJavaName(String desc) {
         int brackets = 0;
         while(desc.charAt(0) == '[') {
             brackets++;

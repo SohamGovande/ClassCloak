@@ -50,6 +50,7 @@ public class NameObfuscateAction extends Action implements Globals {
                 .ifPresent(methodNode -> {
                     System.out.println("FOUND METHOD sayHi");
                     StackInterpreter interpreter = new StackInterpreter(methodNode);
+                    interpreter.interpret();
                     System.out.println(interpreter.getBranches().size());
                     List<Field> fields = new ArrayList<>(Arrays.asList(Opcodes.class.getDeclaredFields()));
                     Collections.reverse(fields);

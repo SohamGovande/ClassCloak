@@ -110,10 +110,10 @@ public class FieldNodeTarget extends NodeTarget {
             if(!targetInstanceof.equals("*")) {
                 String targetNoarray = targetInstanceof.replace("[]", "").replace('.', '/');
                 String fieldDescNoarray = target.desc.replace("[", "");
-                int targetArrayCount = BytecodeUtils.dimensionArrayCountInExternal(targetInstanceof);
-                int fieldArrayCount = BytecodeUtils.dimensionArrayCountInInternal(target.desc);
+                int targetArrayCount = BytecodeUtils.getArrayDimensionsInJavaName(targetInstanceof);
+                int fieldArrayCount = BytecodeUtils.getArrayDimensionsInDescriptor(target.desc);
                 if (fieldDescNoarray.length() == 1) {
-                    String fieldTypeJava = BytecodeUtils.descToName(fieldDescNoarray);
+                    String fieldTypeJava = BytecodeUtils.convertDescriptorToJavaName(fieldDescNoarray);
                     if (!conformsToWildcards(targetNoarray, fieldTypeJava) || targetArrayCount != fieldArrayCount) {
                         return false;
                     }

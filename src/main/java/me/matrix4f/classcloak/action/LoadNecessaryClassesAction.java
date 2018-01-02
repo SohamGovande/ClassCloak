@@ -9,8 +9,6 @@ import me.matrix4f.classcloak.util.BytecodeUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static me.matrix4f.classcloak.Globals.LOGGER;
-
 //todo add invokedynamic support
 public class LoadNecessaryClassesAction extends Action {
 
@@ -36,7 +34,7 @@ public class LoadNecessaryClassesAction extends Action {
                     extractClassesFrom(cpr, cpr.at(cfr.getClassIndex()))
             );
             String desc = ((ConstantUtf8) cpr.at(((ConstantNameAndType) cpr.at(cfr.getNatIndex())).getDescIndex())).getValue();
-            String internalName = BytecodeUtils.getInternalName(desc);
+            String internalName = BytecodeUtils.getInternalNameOfDescriptor(desc);
             list.add(internalName);
             return list;
         }
@@ -49,13 +47,13 @@ public class LoadNecessaryClassesAction extends Action {
             if(add != null)
                 list.addAll(add);
             String desc = ((ConstantUtf8) cpr.at(((ConstantNameAndType) cpr.at(cmr.getNatIndex())).getDescIndex())).getValue();
-            list.addAll(BytecodeUtils.getInternalNames(desc));
+            list.addAll(BytecodeUtils.getInternalNamesUsedByMethodSignature(desc));
             return list;
         }
         if(cst instanceof ConstantMethodType) {
             ConstantMethodType cmt = (ConstantMethodType) cst;
             String desc = ((ConstantUtf8) cpr.at(((ConstantNameAndType) cpr.at(cmt.getDescIndex())).getDescIndex())).getValue();
-            return new ArrayList<>(BytecodeUtils.getInternalNames(desc));
+            return new ArrayList<>(BytecodeUtils.getInternalNamesUsedByMethodSignature(desc));
         }
         return null;
     }

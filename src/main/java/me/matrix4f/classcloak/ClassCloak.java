@@ -1,6 +1,5 @@
 package me.matrix4f.classcloak;
 
-import org.objectweb.asm.tree.ClassNode;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -8,15 +7,14 @@ import me.matrix4f.classcloak.action.ClassPathVerifierAction;
 import me.matrix4f.classcloak.action.LoadNecessaryClassesAction;
 import me.matrix4f.classcloak.action.ObfGlobal;
 import me.matrix4f.classcloak.action.SaveAction;
-import me.matrix4f.classcloak.action.name.NameObfuscateAction;
-import me.matrix4f.classcloak.action.name.nameofbmap.NameObfMap;
 import me.matrix4f.classcloak.script.ScriptHandler;
 import me.matrix4f.classcloak.util.FileIOUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.util.*;
-import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 

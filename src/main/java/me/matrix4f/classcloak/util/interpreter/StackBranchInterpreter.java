@@ -1,16 +1,19 @@
 package me.matrix4f.classcloak.util.interpreter;
 
+import me.matrix4f.classcloak.Globals;
+import me.matrix4f.classcloak.util.BytecodeUtils;
+import me.matrix4f.classcloak.util.interpreter.ObjectType.C;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import me.matrix4f.classcloak.util.BytecodeUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.function.IntConsumer;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
+import static me.matrix4f.classcloak.Globals.LOGGER;
+import static me.matrix4f.classcloak.util.interpreter.ObjectType.C.ONE;
+import static me.matrix4f.classcloak.util.interpreter.ObjectType.C.TWO;
 import static org.objectweb.asm.Opcodes.*;
 
 public class StackBranchInterpreter {
@@ -89,16 +92,20 @@ public class StackBranchInterpreter {
 //    private void interpretLine(LineNumberNode node) {}
 //    private void interpretFrame(FrameNode node) {}
 
-    //UTILITY METHODS
-    private void pushStackObj(AbstractInsnNode node, String desc) {
-        stackActions.add(new StackAction(node, StackAction.Type.PUSH, new ObjectType(ObjectType.Type.OBJECT, desc)));
+    //UTILITY METHODS FOR ANALYSIS
+    private void pushStack(AbstractInsnNode node, String desc) {
+        pushStack(node, new ObjectType(ObjectType.Type.OBJECT, desc));
+    }
+
+    private void pushStack(AbstractInsnNode node, ObjectType type) {
+        stackActions.add(new StackAction(node, StackAction.Type.PUSH, type));
     }
 
     private void popStack(AbstractInsnNode node) {
         stackActions.add(new StackAction(node, StackAction.Type.POP, null));
     }
 
-    private void setLocalVar(VarInsnNode node, String desc) {
+    private void setLocalVar(VarInsnNode node, ObjectType objectType) {
         LocalVarAction.Type type;
         if(localVarActions.stream()
                 .mapToInt(LocalVarAction::getIndex)
@@ -107,25 +114,120 @@ public class StackBranchInterpreter {
         } else {
             type = LocalVarAction.Type.CREATE;
         }
-        localVarActions.add(new LocalVarAction(node, type, node.var, new ObjectType(ObjectType.Type.OBJECT, desc)));
+        localVarActions.add(new LocalVarAction(node, type, node.var, objectType));
     }
 
-    private String getLocalVarDesc(int index) {
-        return localVarActions.stream()
-                .sorted(Collections.reverseOrder())
-                .filter(var -> var.getIndex() == index)
-                .map(LocalVarAction::getObjectType)
-                .map(ObjectType::getDescriptor)
-                .findFirst()
-                .get();
+    private void setLocalVar(VarInsnNode node, String desc) {
+        setLocalVar(node, new ObjectType(ObjectType.Type.OBJECT, desc));
     }
 
+    /**
+     * Gets the type of the local variable at the specified index BEFORE the specified node
+     * @param location The node at which to get the type of local variable
+     * @param index The index of the local variable
+     * @return The type of the local variable - null if not found
+     */
+    private ObjectType getLocalVarType(AbstractInsnNode location, int index) {
+        ObjectType targetType = null;
+        for(LocalVarAction action : localVarActions) {
+            if(action.getSource() == location)
+                break;
+            if(action.getIndex() == index)
+                targetType = action.getObjectType();
+        }
+        return targetType;
+    }
+
+    /**
+     * Finds the type of the object on the stack before the specified instruction
+     * @param location The instruction at which to find to find the stack size
+     * @param down 0 for topmost, -1 for 2nd topmost etc
+     * @param lenient Whether to return null if no value exists at the stack size
+     * @return The type of the object on the stack at that position
+     */
+    public ObjectType getStackTypeAt(AbstractInsnNode location, int down, boolean lenient) {
+        LinkedList<ObjectType> stack = new LinkedList<>();
+
+        for (StackAction action : stackActions) {
+            //stop when reaching the node
+            if (action.getSource() == location) {
+                break;
+            }
+            switch (action.getOperationType()) {
+                case PUSH:
+                    stack.add(action.getObjectType());
+                    break;
+                case POP:
+                    stack.removeLast();
+                    break;
+            }
+        }
+        if(!lenient) {
+            return stack.get(stack.size() - down - 1);
+        } else {
+            try {
+                return stack.get(stack.size() - down - 1);
+            } catch (IndexOutOfBoundsException e) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     *
+     * @param node The node at which to collect stack elements
+     * @param size The number of elements to collect from the stack
+     * @return An array containing the stack elements with the first element being the topmost element,
+     * 2nd element is right below the topmost element, etc.
+     */
+    public ObjectType[] collectStack(AbstractInsnNode node, int size) {
+        ObjectType[] stack = new ObjectType[size];
+        for(int i = 0; i < size; i++)
+            stack[i] = getStackTypeAt(node, i, true);
+        return stack;
+    }
+
+    /**
+     * Finds the stack size before the specified instruction
+     * @param location The instruction at which to find the stack size
+     * @return The size of the stack at that position
+     */
+    public int getStackSizeAt(AbstractInsnNode location) {
+        int size = 0;
+
+        for (StackAction action : stackActions) {
+            //stop when reaching the node
+            if (action.getSource() == location) {
+                break;
+            }
+            switch (action.getOperationType()) {
+                case PUSH:
+                    size++;
+                    break;
+                case POP:
+                    size--;
+                    break;
+            }
+        }
+        return size;
+    }
+
+    public boolean stackCategoriesAre(AbstractInsnNode location, C... states) {
+        if(getStackSizeAt(location) < states.length)
+            return false;
+        ObjectType[] stack = collectStack(location, states.length);
+        for(int i = 0; i < states.length; i++)
+            if(stack[i].getCategory() != states[i])
+                return false;
+
+        return true;
+    }
 
     //INTERPRETING METHODS
     private void interpretInsn(InsnNode node) {
         switch (node.getOpcode()) {
             case ACONST_NULL:
-                pushStackObj(node, "Ljava/lang/Object;");
+                pushStack(node, "Ljava/lang/Object;");
                 break;
             case ICONST_0:
             case ICONST_1:
@@ -134,43 +236,335 @@ public class StackBranchInterpreter {
             case ICONST_4:
             case ICONST_5:
             case ICONST_M1:
-                pushStackObj(node, "I");
+                pushStack(node, "I");
                 break;
             case LCONST_0:
             case LCONST_1:
-                pushStackObj(node, "J");
+                pushStack(node, "J");
                 break;
             case DCONST_0:
             case DCONST_1:
-                pushStackObj(node, "D");
+                pushStack(node, "D");
                 break;
             case FCONST_0:
             case FCONST_1:
             case FCONST_2:
-                pushStackObj(node, "F");
+                pushStack(node, "F");
                 break;
             case IALOAD:
                 popStack(node);
                 popStack(node);
-                pushStackObj(node, "I");
+                pushStack(node, "I");
                 break;
             case BALOAD:
                 popStack(node);
                 popStack(node);
-                pushStackObj(node, "B");
+                pushStack(node, "B");
                 break;
             case FALOAD:
                 popStack(node);
                 popStack(node);
-                pushStackObj(node, "F");
+                pushStack(node, "F");
                 break;
             case AALOAD:
-                //todo better decsriptor, track arrays perhaps?
-                //todo track the stack and find of which type this array is
                 popStack(node); //pop index
-                //the array reference is on the stack
+                popStack(node); //pop array reference
+
+                String arrayObjectDesc = getStackTypeAt(node, 1, false).getDescriptor().substring(1); //remove the [
+                
+                pushStack(node, arrayObjectDesc);
+                break;
+            case SALOAD:
                 popStack(node);
-                pushStackObj(node, "Ljava/lang/Object;");
+                popStack(node);
+                pushStack(node, "S");
+                break;
+            case CALOAD:
+                popStack(node);
+                popStack(node);
+                pushStack(node, "C");
+                break;
+            case LALOAD:
+                popStack(node);
+                popStack(node);
+                pushStack(node, "L");
+                break;
+            case DALOAD:
+                popStack(node);
+                popStack(node);
+                pushStack(node, "D");
+                break;
+            case IASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case LASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case FASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case DASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case AASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case BASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case CASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case SASTORE:
+                popStack(node);
+                popStack(node);
+                popStack(node);
+                break;
+            case POP:
+            case ATHROW:
+            case IRETURN:
+            case FRETURN:
+            case DRETURN:
+            case LRETURN:
+            case ARETURN:
+                popStack(node);
+                break;
+            case POP2:
+                popStack(node);
+                popStack(node);
+                break;
+            case DUP:
+                pushStack(node, getStackTypeAt(node, 0, false).getDescriptor());
+                break;
+            case DUP_X1: {
+                ObjectType topValue = getStackTypeAt(node, 0, false);
+                ObjectType belowTop = getStackTypeAt(node, 1, false);
+                ObjectType topValueClone = topValue.clone();
+
+                //v2, v1 -> v1, v2, v1
+                popStack(node); // pop v1
+                popStack(node); // pop v2
+                pushStack(node, topValueClone); //push clone v1
+                pushStack(node, belowTop); //push v2
+                pushStack(node, topValue); //push v1
+                break;
+            }
+            case DUP_X2: {
+                if(stackCategoriesAre(node, ONE, ONE, ONE)) {
+                    ObjectType[] stack = collectStack(node, 3);
+                    //v3, v2, v1 -> v1, v3, v2, v1
+                    popStack(node); //pop v1
+                    popStack(node); //pop v2
+                    popStack(node); //pop v3
+                    pushStack(node, stack[0].clone()); //push v1's clone
+                    pushStack(node, stack[2]); //push v3
+                    pushStack(node, stack[1]); //push v2
+                    pushStack(node, stack[0]); //push v1
+                } else if(stackCategoriesAre(node, ONE, TWO)) {
+                    ObjectType[] stack = collectStack(node, 2);
+                    //v2, v1 -> v1, v2, v1
+                    popStack(node); // pop v1
+                    popStack(node); // pop v2
+                    pushStack(node, stack[0].clone()); //push clone v1
+                    pushStack(node, stack[1]); //push v2
+                    pushStack(node, stack[0]); //push v1
+                } else LOGGER.fatal("DUP X2 ANALYZER STACK ERROR");
+                break;
+            }
+            case DUP2: {
+                ObjectType topStack = getStackTypeAt(node, 0, false);
+                if(topStack.isC1()) {
+                    //v2, v1 -> v2, v1, v2, v1
+                    ObjectType belowTop = getStackTypeAt(node, 1, false);
+                    pushStack(node, belowTop.clone()); //push v2
+                    pushStack(node, topStack.clone()); //push v1
+                } else {
+                    //v1 -> v1, v1
+                    pushStack(node, topStack.clone());
+                }
+                break;
+            }
+            case DUP2_X1: {
+                if(stackCategoriesAre(node, ONE, ONE, ONE)) {
+                    //v3, v2, v1 -> v2, v1, v3, v2, v1
+                    ObjectType[] stack = collectStack(node, 3);
+
+                    popStack(node); //pop v1
+                    popStack(node); //pop v2
+                    popStack(node); //pop v3
+                    pushStack(node, stack[1].clone()); //push v2's clone
+                    pushStack(node, stack[0].clone()); //push v1's clone
+                    pushStack(node, stack[2]); //push v3
+                    pushStack(node, stack[1]); //push v2
+                    pushStack(node, stack[0]); //push v1
+                } else if(stackCategoriesAre(node, TWO, ONE)) {
+                    //v2, v1 -> v1, v2, v1
+                    ObjectType[] stack = collectStack(node, 2);
+                    popStack(node); // pop v1
+                    popStack(node); // pop v2
+                    pushStack(node, stack[0].clone()); //push clone v1
+                    pushStack(node, stack[1]); //push v2
+                    pushStack(node, stack[0]); //push v1
+                } else LOGGER.fatal("DUP2 X1 ANALYZER STACK ERROR");
+                break;
+            }
+            case DUP2_X2: {
+                if(stackCategoriesAre(node, ONE, ONE, ONE, ONE)) {
+                    //v4, v3, v2, v1 -> v2, v1, v4, v3, v2, v1
+                    ObjectType[] stack = collectStack(node, 4);
+                    //pop v1, v2, v3, v4
+                    popStack(node);
+                    popStack(node);
+
+                    popStack(node);
+                    popStack(node);
+                    //push v2, v1
+                    pushStack(node, stack[1].clone());
+                    pushStack(node, stack[0].clone());
+                    //push v4, v3, v2, v1
+                    pushStack(node, stack[3]);
+                    pushStack(node, stack[2]);
+                    pushStack(node, stack[1]);
+                    pushStack(node, stack[0]);
+                } else if(stackCategoriesAre(node, TWO, ONE, ONE) || stackCategoriesAre(node, ONE, ONE, TWO)) {
+                    //v3, v2, v1 -> v1, v3, v2, v1
+                    ObjectType[] stack = collectStack(node, 3);
+                    //pop v3, v2, v1
+                    popStack(node);
+                    popStack(node);
+                    popStack(node);
+                    //push v1
+                    pushStack(node, stack[0].clone());
+                    //push v3, v2, v1
+                    pushStack(node, stack[2]);
+                    pushStack(node, stack[1]);
+                    pushStack(node, stack[0]);
+                } else if(stackCategoriesAre(node, TWO, TWO)) {
+                    //v2, v1, -> v1, v2, v1
+                    ObjectType[] stack = collectStack(node, 3);
+                    //pop v2, v1
+                    popStack(node);
+                    popStack(node);
+                    //push v1
+                    pushStack(node, stack[0].clone());
+                    //push v2, v1
+                    pushStack(node, stack[1]);
+                    pushStack(node, stack[0]);
+                } else LOGGER.fatal("DUP2 X2 ANALYZER STACK ERROR");
+                break;
+            }
+            case SWAP: {
+                popStack(node);
+                popStack(node);
+                ObjectType[] stack = collectStack(node, 2);
+                pushStack(node, stack[1]);
+                pushStack(node, stack[0]);
+                break;
+            }
+            case IADD:
+            case ISUB:
+            case IMUL:
+            case IDIV:
+            case IREM:
+
+            case LADD:
+            case LSUB:
+            case LMUL:
+            case LDIV:
+            case LREM:
+
+            case FADD:
+            case FSUB:
+            case FMUL:
+            case FDIV:
+            case FREM:
+
+            case DADD:
+            case DSUB:
+            case DMUL:
+            case DDIV:
+            case DREM:
+
+            case ISHR:
+            case ISHL:
+            case IUSHR:
+
+            case LSHR:
+            case LSHL:
+            case LUSHR:
+
+            case IAND:
+            case IOR:
+            case IXOR:
+
+            case LAND:
+            case LOR:
+            case LXOR:
+                popStack(node);
+                break;
+
+            case I2L:
+            case F2L:
+            case D2L:
+                popStack(node);
+                pushStack(node, "L");
+                break;
+            case I2F:
+            case D2F:
+            case L2F:
+                popStack(node);
+                pushStack(node, "F");
+                break;
+            case L2I:
+            case D2I:
+            case F2I:
+                popStack(node);
+                pushStack(node, "I");
+                break;
+            case L2D:
+            case F2D:
+            case I2D:
+                popStack(node);
+                pushStack(node, "D");
+                break;
+            case I2B:
+                popStack(node);
+                pushStack(node, "B");
+                break;
+            case I2C:
+                popStack(node);
+                pushStack(node, "C");
+                break;
+            case I2S:
+                popStack(node);
+                pushStack(node, "S");
+                break;
+            case LCMP:
+            case FCMPL:
+            case FCMPG:
+            case DCMPL:
+            case DCMPG:
+                popStack(node);
+                popStack(node);
+                pushStack(node, "I");
+                break;
+            case ARRAYLENGTH:
+                popStack(node);
+                pushStack(node, "I");
                 break;
         }
     }
@@ -178,35 +572,34 @@ public class StackBranchInterpreter {
     private void interpretIntInsn(IntInsnNode node) {
         switch (node.getOpcode()) {
             case BIPUSH:
-                pushStackObj(node, "B");
+                pushStack(node, "B");
                 break;
             case SIPUSH:
-                pushStackObj(node, "S");
+                pushStack(node, "S");
                 break;
             case NEWARRAY:
                 popStack(node);
-                pushStackObj(node, BytecodeUtils.newarrayTypeMap.get(node.operand));
+                pushStack(node, BytecodeUtils.newarrayTypeMap.get(node.operand));
                 break;
         }
     }
 
     private void interpretVarInsn(VarInsnNode node) {
         switch (node.getOpcode()) {
-            //TODO ret
             case ILOAD:
-                pushStackObj(node, "I");
+                pushStack(node, "I");
                 break;
             case LLOAD:
-                pushStackObj(node, "J");
+                pushStack(node, "J");
                 break;
             case FLOAD:
-                pushStackObj(node, "F");
+                pushStack(node, "F");
                 break;
             case DLOAD:
-                pushStackObj(node, "D");
+                pushStack(node, "D");
                 break;
             case ALOAD:
-                pushStackObj(node, getLocalVarDesc(node.var));
+                pushStack(node, getLocalVarType(node, node.var));
                 break;
             case ISTORE:
                 popStack(node);
@@ -225,8 +618,10 @@ public class StackBranchInterpreter {
                 setLocalVar(node,"F");
                 break;
             case ASTORE:
+                ObjectType type = getStackTypeAt(node, 0, false);
                 popStack(node);
-                setLocalVar(node, getLocalVarDesc(node.var));
+
+                setLocalVar(node, type);
                 break;
         }
     }
@@ -234,19 +629,19 @@ public class StackBranchInterpreter {
     private void interpretTypeInsn(TypeInsnNode node) {
         switch (node.getOpcode()) {
             case NEW:
-                pushStackObj(node, node.desc);
+                pushStack(node, "L" + node.desc + ";");
                 break;
             case ANEWARRAY:
                 popStack(node);
-                pushStackObj(node, node.desc);
+                pushStack(node, "[L" + node.desc + ";");
                 break;
             case CHECKCAST:
                 popStack(node);
-                pushStackObj(node, node.desc);
+                pushStack(node, node.desc.charAt(node.desc.length()-1) == ';' ? node.desc : ("L" + node.desc + ";"));
                 break;
             case INSTANCEOF:
                 popStack(node);
-                pushStackObj(node, "Z");
+                pushStack(node, "Z");
                 break;
         }
     }
@@ -259,14 +654,14 @@ public class StackBranchInterpreter {
                 break;
             case GETFIELD:
                 popStack(node);
-                pushStackObj(node, node.desc);
+                pushStack(node, node.desc);
                 break;
 
             case PUTSTATIC:
                 popStack(node);
                 break;
             case GETSTATIC:
-                pushStackObj(node, node.desc);
+                pushStack(node, node.desc);
                 break;
         }
     }
@@ -276,13 +671,13 @@ public class StackBranchInterpreter {
         if(node.getOpcode() != INVOKESTATIC)
             popStack(node);
         //pop the arguments off the stack
-        IntStream.range(0, Type.getArgumentTypes(node.desc).length)
-                .forEach(value -> popStack(node));
+        for(int i = 0; i < Type.getArgumentTypes(node.desc).length; i++)
+            popStack(node);
 
         //push the return type
         Type returnType;
         if((returnType = Type.getReturnType(node.desc)) != Type.VOID_TYPE)
-            pushStackObj(node, returnType.getDescriptor());
+            pushStack(node, returnType.getDescriptor());
     }
 
     private void interpretInvokeDynamicInsn(InvokeDynamicInsnNode node) {
@@ -298,13 +693,13 @@ public class StackBranchInterpreter {
                 popStack(node);
 
             //pop the arguments off the stack
-            IntStream.range(0, Type.getArgumentTypes(node.desc).length)
-                    .forEach(value -> popStack(node));
+            for(int i = 0; i <=  Type.getArgumentTypes(node.desc).length; i++)
+                popStack(node);
 
             //push the return type
             Type returnType;
             if ((returnType = Type.getReturnType(node.desc)) != Type.VOID_TYPE)
-                pushStackObj(node, returnType.getDescriptor());
+                pushStack(node, returnType.getDescriptor());
         } else if(isField) {
             switch (tag) {
                 case H_PUTFIELD:
@@ -313,14 +708,14 @@ public class StackBranchInterpreter {
                     break;
                 case H_GETFIELD:
                     popStack(node);
-                    pushStackObj(node, node.desc);
+                    pushStack(node, node.desc);
                     break;
                     
                 case H_PUTSTATIC:
                     popStack(node);
                     break;
                 case H_GETSTATIC:
-                    pushStackObj(node, node.desc);
+                    pushStack(node, node.desc);
                     break;
             }
         }
@@ -339,7 +734,6 @@ public class StackBranchInterpreter {
 
             case IFNULL:
             case IFNONNULL:
-
                 popStack(node);
                 break;
             case IF_ICMPEQ:
@@ -366,17 +760,17 @@ public class StackBranchInterpreter {
 
     private void interpretLdcInsn(LdcInsnNode node) {
         if(node.cst instanceof Integer)
-            pushStackObj(node, "I");
+            pushStack(node, "I");
         else if(node.cst instanceof Long)
-            pushStackObj(node, "J");
+            pushStack(node, "J");
         else if(node.cst instanceof Float)
-            pushStackObj(node, "F");
+            pushStack(node, "F");
         else if(node.cst instanceof Double)
-            pushStackObj(node, "D");
+            pushStack(node, "D");
         else if(node.cst instanceof String)
-            pushStackObj(node, "Ljava/lang/String;");
+            pushStack(node, "Ljava/lang/String;");
         else if(node.cst instanceof Type)
-            pushStackObj(node, ((Type) node.cst).getDescriptor());
+            pushStack(node, ((Type) node.cst).getDescriptor());
     }
 
     private void interpretIincInsn(IincInsnNode node) {}
@@ -390,9 +784,9 @@ public class StackBranchInterpreter {
     }
 
     private void interpretMultiANewArrayInsn(MultiANewArrayInsnNode node) {
-        IntStream.range(0, node.dims)
-                .forEach(value -> popStack(node));
-        pushStackObj(node, node.desc);
+        for(int i = 0; i < node.dims; i++)
+            popStack(node);
+        pushStack(node, node.desc);
     }
 
     public List<AbstractInsnNode> getInsns() {

@@ -4,15 +4,12 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import me.matrix4f.classcloak.util.BytecodeUtils;
-import me.matrix4f.classcloak.util.parsing.ParsingUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static me.matrix4f.classcloak.target.ClassNodeTarget.*;
-import static me.matrix4f.classcloak.target.ClassNodeTarget.SUPER;
 import static me.matrix4f.classcloak.util.parsing.ParsingUtils.conformsToWildcards;
 
 public class MethodNodeTarget extends NodeTarget {
@@ -113,11 +110,11 @@ public class MethodNodeTarget extends NodeTarget {
                     continue;
                 Type type = types[i];
                 if(type.getDescriptor().replace("[","").length() != 1) { //Object type; non primitive
-                    String methodParamDesc = BytecodeUtils.nameToDesc(methodParams.get(i));
+                    String methodParamDesc = BytecodeUtils.convertTypeNameToDescriptor(methodParams.get(i));
                     if(!conformsToWildcards(methodParamDesc, type.getDescriptor()))
                         return false;
                 } else {
-                    String methodParamDesc = BytecodeUtils.nameToDescNoL(methodParams.get(i));
+                    String methodParamDesc = BytecodeUtils.convertTypeNameToDescriptorWithoutPrecedingL(methodParams.get(i));
                     if(!conformsToWildcards(methodParamDesc, type.getDescriptor())) {
                         return false;
                     }

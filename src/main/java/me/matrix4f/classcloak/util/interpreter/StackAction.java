@@ -4,13 +4,13 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 
 public class StackAction {
 
-    private Type stackType;
+    private Type operationType;
     private ObjectType objectType;
     private AbstractInsnNode source;
 
-    public StackAction(AbstractInsnNode source, Type stackType, ObjectType objectType) {
+    public StackAction(AbstractInsnNode source, Type operationType, ObjectType objectType) {
         this.source = source;
-        this.stackType = stackType;
+        this.operationType = operationType;
         this.objectType = objectType;
     }
 
@@ -18,8 +18,8 @@ public class StackAction {
         return source;
     }
 
-    public Type getStackType() {
-        return stackType;
+    public Type getOperationType() {
+        return operationType;
     }
 
     public ObjectType getObjectType() {

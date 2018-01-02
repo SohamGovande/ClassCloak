@@ -24,7 +24,28 @@ public class ObjectType {
         return (String) data;
     }
 
+    public boolean isC1() {
+        return !isC2();
+    }
+
+    public boolean isC2() {
+        String descNoArray = getDescriptor().replace("[","");
+        return descNoArray.equals("D") || descNoArray.equals("J");
+    }
+
+    public C getCategory() {
+        return isC2() ? C.TWO : C.ONE;
+    }
+
+    public ObjectType clone() {
+        return new ObjectType(type, data);
+    }
+
     public enum Type {
         RETURN_ADDRESS, OBJECT
+    }
+
+    public enum C {
+        ONE, TWO
     }
 }
