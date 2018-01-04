@@ -82,7 +82,7 @@ public class LoadNecessaryClassesAction extends Action {
         Set<String> classesUsed = getUsedClasses();
 
         //reduce the set to only contain external classes used
-        ObfGlobal.classes.stream()
+        ObfGlobal.sourceClasses.stream()
                 .map(cn -> cn.name)
                 .forEach(classesUsed::remove);
 

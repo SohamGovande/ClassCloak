@@ -19,7 +19,7 @@ public class ClassPathVerifierAction extends Action {
 
     private void verify() throws CE {
         checkForDuplicateClasses();
-        for(ClassNode cn : classes) {
+        for(ClassNode cn : sourceClasses) {
             checkClassMethodDeclarations(cn);
             checkClassFields(cn);
             checkClassInfo(cn);
@@ -83,7 +83,7 @@ public class ClassPathVerifierAction extends Action {
         return (classpath.stream()
                 .filter(node -> node.name.equals(finalS))
                 .count() > 0) ||
-                (classes.stream()
+                (sourceClasses.stream()
                 .filter(node -> node.name.equals(finalS))
                 .count() > 0);
     }

@@ -5,16 +5,12 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 import me.matrix4f.classcloak.action.ObfGlobal;
 import me.matrix4f.classcloak.mapping.Mapping;
-import me.matrix4f.classcloak.mapping.Mappings;
 import me.matrix4f.classcloak.mapping.Mappings.*;
-import me.matrix4f.classcloak.util.NodeNameRemapper;
 import me.matrix4f.classcloak.util.parsing.ParsingUtils;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class NameObfMap {
@@ -28,7 +24,7 @@ public class NameObfMap {
         Fields.clear();
         Methods.clear();
 
-        ObfGlobal.classes.forEach(classNode -> {
+        ObfGlobal.sourceClasses.forEach(classNode -> {
             ClassReference cr = new ClassReference(classNode.name, classNode.name);
             Classes.put(classNode, cr);
 

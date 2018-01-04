@@ -150,6 +150,6 @@ public class NodeOpaquePredClassBuilder {
 
     public static void generateIfNeeded() {
         if(!generated)
-            ObfGlobal.classes.add(gen());
+            ObfGlobal.sourceClasses.add(gen());
     }
 }

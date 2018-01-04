@@ -22,14 +22,14 @@ public class ObfGlobal {
     public static File inputFile = null, outputFile = null;
     public static Manifest manifest = null;
 
-    public static List<ClassNode> classes = null, previousClasses = null;
+    public static List<ClassNode> sourceClasses = null, previousClasses = null;
     public static List<JarFileEntry> inputJarEntries = null;
 
     public static List<ClassNode> classpath = new ArrayList<>();
     public static List<JarFileEntry> classpathJarEntries = new ArrayList<>();
 
     public static List<ClassNode> allClasses() {
-        ArrayList<ClassNode> nodes = new ArrayList<>(classes);
+        ArrayList<ClassNode> nodes = new ArrayList<>(sourceClasses);
         nodes.addAll(classpath);
         return nodes;
     }

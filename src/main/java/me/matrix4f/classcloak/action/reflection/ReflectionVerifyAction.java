@@ -12,17 +12,13 @@ import me.matrix4f.classcloak.action.name.nameofbmap.NameObfMap;
 import me.matrix4f.classcloak.action.opaquepredicates.NodeOpaquePred;
 import me.matrix4f.classcloak.util.BytecodeUtils;
 import me.matrix4f.classcloak.util.MethodBuilder;
-import me.matrix4f.classcloak.util.StringUtils;
 
-import java.lang.reflect.Method;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.objectweb.asm.Opcodes.*;
 import static me.matrix4f.classcloak.Globals.LOGGER;
-import static me.matrix4f.classcloak.action.ObfGlobal.classes;
+import static me.matrix4f.classcloak.action.ObfGlobal.sourceClasses;
 import static me.matrix4f.classcloak.action.ObfGlobal.reflectionSettings;
 
 /**
@@ -44,12 +40,12 @@ public class ReflectionVerifyAction extends Action {
         ClassNode reflectionClass = generateClass();
 
         for(ReflectionEntry entry : reflectionSettings.entries)
-            for(ClassNode clazz : classes)
+            for(ClassNode clazz : sourceClasses)
                 for(MethodNode method : clazz.methods)
                     if(entry.getFrom().stream().anyMatch(node -> node.doesExcludeNode(method, clazz)))
                         performEdits(reflectionClass, entry.getMethodMap(), method);
 
-        ObfGlobal.classes.add(reflectionClass);
+        ObfGlobal.sourceClasses.add(reflectionClass);
     }
 
     private void performEdits(ClassNode reflectionClass, ReflectionMethodMap map, MethodNode context) {

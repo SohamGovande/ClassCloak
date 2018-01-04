@@ -35,7 +35,7 @@ public class StringObfuscateAction extends Action {
         }
         Objects.requireNonNull(obfMethod, "String action method is null - this should never happen");
 
-        List<ClassNode> classNodes = ObfGlobal.classes;
+        List<ClassNode> classNodes = ObfGlobal.sourceClasses;
 
         StringObfInfo info = obfMethod.generateInfo();
         classNodes.add(info.getDeobfuscatorClass());

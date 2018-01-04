@@ -15,7 +15,7 @@ public class SaveAction extends Action {
         LOGGER.info("Saving all classes...");
 
         //add any new classes that were created
-        ObfGlobal.classes.stream()
+        ObfGlobal.sourceClasses.stream()
                 .filter(node -> !ObfGlobal.previousClasses.contains(node))
                 .map(node -> new JarFileEntry(node, node.name, null))
                 .forEach(ObfGlobal.inputJarEntries::add);

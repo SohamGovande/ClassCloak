@@ -19,7 +19,7 @@ public class LineNumberObfuscateAction extends Action {
     public void execute() {
         LOGGER.info("Applying line number transformations with obf method");
 
-        List<ClassNode> classNodes = ObfGlobal.classes;
+        List<ClassNode> classNodes = ObfGlobal.sourceClasses;
         classNodes.forEach(classNode -> {
             if(lineSettings.shouldExclude(classNode))
                 return;

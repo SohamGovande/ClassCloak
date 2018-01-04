@@ -72,11 +72,11 @@ public class ClassCloak {
 
             //filter all jar file entries into only node
 
-            ObfGlobal.classes = jarEntries.stream()
+            ObfGlobal.sourceClasses = jarEntries.stream()
                     .filter(JarFileEntry::isTargettingClass)
                     .map(JarFileEntry::getTargetNode)
                     .collect(Collectors.toList());
-            ObfGlobal.previousClasses = new ArrayList<>(ObfGlobal.classes);
+            ObfGlobal.previousClasses = new ArrayList<>(ObfGlobal.sourceClasses);
             ObfGlobal.inputJarEntries = jarEntries;
 
             SaveAction saveAction = actions.stream()

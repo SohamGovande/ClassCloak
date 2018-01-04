@@ -1,15 +1,14 @@
 package me.matrix4f.classcloak.util.interpreter;
 
-import me.matrix4f.classcloak.Globals;
+import jdk.internal.org.objectweb.asm.Opcodes;
 import me.matrix4f.classcloak.util.BytecodeUtils;
 import me.matrix4f.classcloak.util.interpreter.ObjectType.C;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static me.matrix4f.classcloak.Globals.LOGGER;
 import static me.matrix4f.classcloak.util.interpreter.ObjectType.C.ONE;
@@ -23,17 +22,38 @@ public class StackBranchInterpreter {
     private List<LocalVarAction> localVarActions = new ArrayList<>();
     private List<StackAction> stackActions = new ArrayList<>();
 
-    public StackBranchInterpreter(List<AbstractInsnNode> list, String descriptor) {
+    private List<Field> fields = Arrays.asList(Opcodes.class.getDeclaredFields());
+
+    public StackBranchInterpreter(List<AbstractInsnNode> list, String ownerClass, MethodNode method) {
         this.list = list;
-        Type[] types = Type.getArgumentTypes(descriptor);
+        method.tryCatchBlocks.forEach(tcb -> {
+            int index = list.indexOf(tcb.handler);
+            if(index != -1)
+                list.add(index, new TypeInsnNode(NEW, tcb.type));
+        });
+
+        if((method.access & ACC_STATIC) != ACC_STATIC) {
+            //non static method has a local variable entry at index 0 with value this
+            localVarActions.add(new LocalVarAction(
+                    null, LocalVarAction.Type.CREATE, 0,
+                    new ObjectType(
+                            ObjectType.Type.OBJECT,
+                            "L" + ownerClass + ";"
+                    )
+            ));
+        }
+        int prevSize = localVarActions.size();
+        Type[] types = Type.getArgumentTypes(method.desc);
         for(int i = 0; i < types.length; i++) {
             localVarActions.add(new LocalVarAction(
-                    null, LocalVarAction.Type.CREATE, i,
+                    null, LocalVarAction.Type.CREATE, i+prevSize, //add previous size in case the THIS was added
                     new ObjectType(
                             ObjectType.Type.OBJECT, types[i].getDescriptor())
                     )
             );
         }
+
+        Collections.reverse(fields);
     }
 
     public void interpret() {
@@ -99,10 +119,14 @@ public class StackBranchInterpreter {
 
     private void pushStack(AbstractInsnNode node, ObjectType type) {
         stackActions.add(new StackAction(node, StackAction.Type.PUSH, type));
+        if(getStackSizeAt(node) < 0)
+            System.out.println("STACK SIZE IS BELOW 0 ERROR");
     }
 
     private void popStack(AbstractInsnNode node) {
         stackActions.add(new StackAction(node, StackAction.Type.POP, null));
+        if(getStackSizeAt(node) < 0)
+            System.out.println("STACK SIZE IS BELOW 0 ERROR");
     }
 
     private void setLocalVar(VarInsnNode node, ObjectType objectType) {
@@ -192,7 +216,7 @@ public class StackBranchInterpreter {
      * @param location The instruction at which to find the stack size
      * @return The size of the stack at that position
      */
-    public int getStackSizeAt(AbstractInsnNode location) {
+    public int getStackSizeBefore(AbstractInsnNode location) {
         int size = 0;
 
         for (StackAction action : stackActions) {
@@ -212,8 +236,29 @@ public class StackBranchInterpreter {
         return size;
     }
 
+    public int getStackSizeAt(AbstractInsnNode location) {
+        int size = 0;
+
+        for (int i = 0; i < stackActions.size(); i++) {
+            StackAction action = stackActions.get(i);
+            switch (action.getOperationType()) {
+                case PUSH:
+                    size++;
+                    break;
+                case POP:
+                    size--;
+                    break;
+            }
+            //stop when reaching the node
+            if (action.getSource() == location && (i == stackActions.size()-1 || stackActions.get(i+1).getSource() != location)) {
+                break;
+            }
+        }
+        return size;
+    }
+
     public boolean stackCategoriesAre(AbstractInsnNode location, C... states) {
-        if(getStackSizeAt(location) < states.length)
+        if(getStackSizeBefore(location) < states.length)
             return false;
         ObjectType[] stack = collectStack(location, states.length);
         for(int i = 0; i < states.length; i++)
@@ -566,6 +611,10 @@ public class StackBranchInterpreter {
                 popStack(node);
                 pushStack(node, "I");
                 break;
+            case MONITORENTER:
+            case MONITOREXIT:
+                popStack(node);
+                break;
         }
     }
 
@@ -620,7 +669,6 @@ public class StackBranchInterpreter {
             case ASTORE:
                 ObjectType type = getStackTypeAt(node, 0, false);
                 popStack(node);
-
                 setLocalVar(node, type);
                 break;
         }
@@ -670,14 +718,16 @@ public class StackBranchInterpreter {
         //pop the object off the stack (if it isn't static)
         if(node.getOpcode() != INVOKESTATIC)
             popStack(node);
+
         //pop the arguments off the stack
         for(int i = 0; i < Type.getArgumentTypes(node.desc).length; i++)
             popStack(node);
 
         //push the return type
         Type returnType;
-        if((returnType = Type.getReturnType(node.desc)) != Type.VOID_TYPE)
+        if((returnType = Type.getReturnType(node.desc)) != Type.VOID_TYPE) {
             pushStack(node, returnType.getDescriptor());
+        }
     }
 
     private void interpretInvokeDynamicInsn(InvokeDynamicInsnNode node) {

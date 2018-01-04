@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static me.matrix4f.classcloak.action.ObfGlobal.classes;
+import static me.matrix4f.classcloak.action.ObfGlobal.sourceClasses;
 
 public class NodeNameRemapper {
 
@@ -121,9 +121,9 @@ public class NodeNameRemapper {
     }
 
     public void changeClassName(String targetClassName, String newName) {
-        ClassNode targetClass = classes.stream().filter(classNode -> classNode.name.equals(targetClassName)).findFirst().get();
+        ClassNode targetClass = sourceClasses.stream().filter(classNode -> classNode.name.equals(targetClassName)).findFirst().get();
 
-        classes.forEach(classNode -> {
+        sourceClasses.forEach(classNode -> {
             //replace interface implements declarations
             for(int i = 0; i < classNode.interfaces.size(); i++)
                 if(classNode.interfaces.get(i).equals(targetClassName))
@@ -234,7 +234,7 @@ public class NodeNameRemapper {
         }
 
         String finalNewName = newName;
-        classes.forEach(classNode -> {
+        sourceClasses.forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 BytecodeUtils.streamInstructions(MethodInsnNode.class, methodNode)
                         .filter(node -> node.desc.equals(target.desc))
@@ -248,7 +248,7 @@ public class NodeNameRemapper {
     }
 
     public void changeFieldName(ClassNode owner, FieldNode target, String newName) {
-        classes.forEach(classNode -> {
+        sourceClasses.forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 BytecodeUtils.streamInstructions(FieldInsnNode.class, methodNode)
                         .filter(node -> node.desc.equals(target.desc))
