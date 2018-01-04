@@ -32,7 +32,8 @@ public class ReflectionVerifyAction extends Action {
                         unmapMethodNameName, unmapMethodNameDesc,
                         unmapMethodDescName, unmapMethodDescDesc,
                         unmapFieldName, unmapFieldDesc,
-                        unmapClassName, unmapClassDesc;
+                        unmapClassName, unmapClassDesc,
+                        descBuilderName, descBuilderDesc;
 
     @Override
     public void execute() {
@@ -65,82 +66,9 @@ public class ReflectionVerifyAction extends Action {
 
             if(declaredMethodCalls.size() == 0)
                 return;
-            List<List<AbstractInsnNode>> between = new ArrayList<>();
 
             for(MethodInsnNode invoker : declaredMethodCalls) {
                 AbstractInsnNode last = invoker;
-                List<AbstractInsnNode> list = new ArrayList<>();
-                boolean go = true;
-                while(go) {
-                    last = last.getPrevious();
-                    list.add(last);
-                    if(last == null)
-                        break;
-                    if(last instanceof TypeInsnNode) {
-                        TypeInsnNode node = (TypeInsnNode) last;
-                        if(node.getOpcode() == ANEWARRAY && node.desc.equals("java/lang/Class")) {
-                            AbstractInsnNode twoBack = node.getPrevious().getPrevious();
-                            int size = 0;
-                            if(twoBack instanceof MethodInsnNode) {
-                                MethodInsnNode method = (MethodInsnNode) twoBack;
-                                if(method.getOpcode() != INVOKESTATIC)
-                                    size = Type.getArgumentTypes(method.desc).length + 1;
-                                else
-                                    size = Type.getArgumentTypes(method.desc).length;
-                            } else if(twoBack instanceof LdcInsnNode) {
-                                size = 1;
-                            } else if(twoBack instanceof VarInsnNode) {
-                                VarInsnNode var = (VarInsnNode) twoBack;
-                                if(var.getOpcode() == ALOAD || var.getOpcode() == AALOAD)
-                                    size = 1;
-                            } else if(twoBack instanceof FieldInsnNode) {
-                                FieldInsnNode field = (FieldInsnNode) twoBack;
-                                if(field.desc.equals("Ljava/lang/String;"))
-                                    size = 2;
-                            }
-
-                            if(size != 0)
-                                go = false;
-                        }
-                    }
-                    Collections.reverse(list);
-                }
-                between.add(list);
-            }
-
-            Map<String,Character> primitiveClasses = new HashMap<>();
-            primitiveClasses.put("java/lang/Byte",'B');
-            primitiveClasses.put("java/lang/Short",'S');
-            primitiveClasses.put("java/lang/Character",'C');
-            primitiveClasses.put("java/lang/Integer",'I');
-            primitiveClasses.put("java/lang/Long",'J');
-            primitiveClasses.put("java/lang/Boolean",'Z');
-            primitiveClasses.put("java/lang/Float",'F');
-            primitiveClasses.put("java/lang/Double",'D');
-            primitiveClasses.put("java/lang/Void",'V');
-
-            for(List<AbstractInsnNode> list : between) {
-                boolean first = true;
-                String name = "";
-                StringBuilder descBuilder = new StringBuilder("(");
-                for(AbstractInsnNode node : list) {
-                    if(first) { //first node is ldc string
-                        name = (String) ((LdcInsnNode) node).cst;
-                        first = false;
-                        continue;
-                    }
-
-                    if(node instanceof LdcInsnNode && ((LdcInsnNode) node).cst instanceof Type) {
-                        descBuilder.append(((Type) ((LdcInsnNode) node).cst).getDescriptor());
-                    } else if(node instanceof FieldInsnNode) {
-                        FieldInsnNode fin = (FieldInsnNode) node;
-                        if(fin.name.equals("TYPE") && fin.desc.equals("Ljava/lang/Class;") && primitiveClasses.containsKey(fin.owner)) {
-                            descBuilder.append(primitiveClasses.get(fin.owner));
-                        }
-                    }
-                }
-                descBuilder.append(')');
-                String desc = descBuilder.toString();
 
             }
         }
@@ -243,7 +171,6 @@ public class ReflectionVerifyAction extends Action {
 
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
-
 
     private String encrypt(String in) {
         return in;
@@ -561,6 +488,135 @@ public class ReflectionVerifyAction extends Action {
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
+    private void generateDescBuilder(ClassWriter cw, String methodName, String methodDesc) {
+        LabelNode afterForLoop = new LabelNode();
+        LabelNode forLoopCheck = new LabelNode();
+        LabelNode storeInSB = new LabelNode(), actualStore = new LabelNode();
+        LabelNode afterIntClass = new LabelNode(),
+                afterShortClass = new LabelNode(),
+                afterLongClass = new LabelNode(),
+                afterBoolClass = new LabelNode(),
+                afterByteClass = new LabelNode(),
+                afterFloatClass = new LabelNode(),
+                afterDoubleClass = new LabelNode(),
+                afterCharClass = new LabelNode();
+        MethodBuilder.newBuilder()
+                .new_("java/lang/StringBuilder")
+                .dup()
+                .ldc("(")
+                .invokespecial("java/lang/StringBuilder", "(Ljava/lang/String;)V")
+                .astore(1)
+
+                .iconst_0()
+                .istore(2)
+
+                .label(forLoopCheck)
+                .iload(2)
+                .aload(0)
+                .arraylength()
+                .icmpGEQUAL(afterForLoop)
+
+                .aload(1)
+
+                .aload(0)
+                .iload(2)
+                .aaload()
+                .astore(3)
+
+                .aconst_null()
+                .astore(4)
+
+                .aload(3)
+                .getstatic("java/lang/Integer","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterIntClass)
+                .ldc("I")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterIntClass)
+
+                .aload(3)
+                .getstatic("java/lang/Short","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterShortClass)
+                .ldc("S")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterShortClass)
+
+                .aload(3)
+                .getstatic("java/lang/Long","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterLongClass)
+                .ldc("J")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterLongClass)
+
+                .aload(3)
+                .getstatic("java/lang/Boolean","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterBoolClass)
+                .ldc("Z")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterBoolClass)
+
+                .aload(3)
+                .getstatic("java/lang/Byte","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterByteClass)
+                .ldc("B")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterByteClass)
+
+                .aload(3)
+                .getstatic("java/lang/Float","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterFloatClass)
+                .ldc("F")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterFloatClass)
+
+                .aload(3)
+                .getstatic("java/lang/Double","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterDoubleClass)
+                .ldc("D")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterDoubleClass)
+
+                .aload(3)
+                .getstatic("java/lang/Character","TYPE","Ljava/lang/Class;")
+                .acmpNOTEQUAL(afterCharClass)
+                .ldc("C")
+                .astore(4)
+                .goto_(actualStore)
+                .label(afterCharClass)
+
+                .label(storeInSB)
+                .aload(4)
+                .ifnonnnull(actualStore)
+
+                .aload(3)
+                .invokevirtual("java/lang/Class","getName","()Ljava/lang/String;")
+                .astore(4)
+
+                .label(actualStore)
+                .aload(4)
+                .invokevirtual("java/lang/StringBuilder","append","(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+                .pop()
+
+                .iinc(2, 1)
+                .goto_(forLoopCheck)
+
+                .label(afterForLoop)
+
+                .aload(1)
+                .ldc(")")
+                .invokevirtual("java/lang/StringBuilder","append","(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder","toString","()Ljava/lang/String;")
+                .areturn()
+
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
+    }
+
     private ClassNode generateClass() {
         String className = ClassNameCreator.instance.getName(null);
         ClassWriter cw = new ClassWriter(0);
@@ -599,6 +655,7 @@ public class ReflectionVerifyAction extends Action {
         generateReflectionObjectAccessorWithDesc(cw, unmapMethodDescName = "a", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
         generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
         generateClassAccessor(cw, unmapClassName = "b", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
+        generateDescBuilder(cw, descBuilderName = "a", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;");
 
         cw.visitEnd();
 

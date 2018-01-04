@@ -349,6 +349,16 @@ public class MethodBuilder {
         return this;
     }
 
+    public MethodBuilder ifnull(int lbl) {
+        insnList.add(new JumpInsnNode(IFNULL, labels.get(lbl)));
+        return this;
+    }
+
+    public MethodBuilder ifnull(LabelNode lbl) {
+        insnList.add(new JumpInsnNode(IFNULL, lbl));
+        return this;
+    }
+
     public MethodBuilder icmpEQUAL(int lbl) {
         insnList.add(new JumpInsnNode(IF_ICMPEQ, labels.get(lbl)));
         return this;
@@ -785,5 +795,8 @@ public class MethodBuilder {
         return this;
     }
 
-
+    public MethodBuilder arraylength() {
+        insnList.add(new InsnNode(ARRAYLENGTH));
+        return this;
+    }
 }
