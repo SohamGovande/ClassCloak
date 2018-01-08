@@ -1,10 +1,13 @@
 package me.matrix4f.classcloak.util;
 
+import jdk.internal.org.objectweb.asm.Opcodes;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
+import java.lang.reflect.Field;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,7 +28,7 @@ public class BytecodeUtils {
     public static final int[] opcodesReturn = {
             RETURN, ARETURN, IRETURN, LRETURN, DRETURN, FRETURN
     };
-
+    private static Map<Integer, String> opcodeNameMap = new HashMap<>();
 
     static {
         primitivesNameMap.put('I',"int");
@@ -45,7 +48,29 @@ public class BytecodeUtils {
         newarrayTypeMap.put(T_DOUBLE,   "D");
         newarrayTypeMap.put(T_SHORT,    "S");
         newarrayTypeMap.put(T_FLOAT,    "F");
+
+        List<Field> fields = Arrays.asList(Opcodes.class.getDeclaredFields());
+        Collections.reverse(fields);
+
+        fields.stream()
+                .filter(field -> !field.getName().startsWith("ACC_") && !field.getName().startsWith("V") && !field.getName().startsWith("F_") && !field.getName().startsWith("ASM") && !field.getName().startsWith("H_") && !field.getName().startsWith("T_") && field.getType() == int.class)
+                .forEach(field -> {
+                    try {
+                        opcodeNameMap.put((Integer) field.get(null), field.getName().toLowerCase());
+                    } catch (Exception e) { }
+                });
     }
+
+    public static InsnList toList(List<AbstractInsnNode> list) {
+        InsnList insns = new InsnList();
+        list.forEach(insns::add);
+        return insns;
+    }
+
+    public static String getOpcodeName(int opcode) {
+        return opcodeNameMap.getOrDefault(opcode, null);
+    }
+
     public static HashMap<String, Character> getNamePrimitivesMap() {
         HashMap<String,Character> map = new HashMap<>();
         primitivesNameMap.forEach((character, s) -> map.put(s,character));

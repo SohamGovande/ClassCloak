@@ -8,7 +8,6 @@ import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.function.Consumer;
 
 import static me.matrix4f.classcloak.Globals.LOGGER;
 import static me.matrix4f.classcloak.util.interpreter.ObjectType.C.ONE;
@@ -21,8 +20,6 @@ public class StackBranchInterpreter {
 
     private List<LocalVarAction> localVarActions = new ArrayList<>();
     private List<StackAction> stackActions = new ArrayList<>();
-
-    private List<Field> fields = Arrays.asList(Opcodes.class.getDeclaredFields());
 
     public StackBranchInterpreter(List<AbstractInsnNode> list, String ownerClass, MethodNode method) {
         this.list = list;
@@ -52,8 +49,11 @@ public class StackBranchInterpreter {
                     )
             );
         }
+    }
 
-        Collections.reverse(fields);
+    public StackBranchInterpreter(List<AbstractInsnNode> list, List<LocalVarAction> locals) {
+        this.localVarActions = locals;
+        this.list = list;
     }
 
     public void interpret() {
@@ -106,6 +106,56 @@ public class StackBranchInterpreter {
 //                    break;
             }
         }
+    }
+
+    public LinkedList<AbstractInsnNode> observeStackBackward(AbstractInsnNode lastInsn, int preferredSize) {
+        //work backward down the instruction list until the stack size is the same - get the instructions in the method call
+        LinkedList<AbstractInsnNode> insns = new LinkedList<>();
+        insns.add(lastInsn);
+
+        int currentStackSize = preferredSize;
+
+        //label nodes / frame nodes / line numbers dont count as valid instructions
+        boolean readInstruction = false;
+        AbstractInsnNode counter = lastInsn.getPrevious();
+
+        while(counter != null) {
+            if (counter.getOpcode() > 0) {
+                currentStackSize = getStackSizeAt(counter);
+                insns.addFirst(counter);
+                readInstruction = true;
+            }
+            counter = counter.getPrevious();
+
+            if(currentStackSize == preferredSize && readInstruction)
+                break;
+        }
+
+        return insns;
+    }
+
+    public LinkedList<AbstractInsnNode> observeStackForward(AbstractInsnNode firstInsn, AbstractInsnNode last, int preferredSize) {
+        AbstractInsnNode lastInsnWithPreferredStack = null;
+        AbstractInsnNode counter = firstInsn;
+
+        while(counter != last) {
+            if (counter.getOpcode() > 0) {
+                int size  = getStackSizeAt(counter);
+                if(size == preferredSize) {
+                    lastInsnWithPreferredStack = counter;
+                }
+            }
+            counter = counter.getNext();
+        }
+
+        LinkedList<AbstractInsnNode> list = new LinkedList<>();
+        counter = firstInsn;
+        while(counter != lastInsnWithPreferredStack) {
+            list.add(counter);
+            counter = counter.getNext();
+        }
+        list.add(lastInsnWithPreferredStack);
+        return list;
     }
 
 //    private void interpretLabel(LabelNode node) {}
@@ -403,7 +453,7 @@ public class StackBranchInterpreter {
                 //v2, v1 -> v1, v2, v1
                 popStack(node); // pop v1
                 popStack(node); // pop v2
-                pushStack(node, topValueClone); //push clone v1
+                pushStack(node, topValueClone); //push cloneList v1
                 pushStack(node, belowTop); //push v2
                 pushStack(node, topValue); //push v1
                 break;
@@ -415,7 +465,7 @@ public class StackBranchInterpreter {
                     popStack(node); //pop v1
                     popStack(node); //pop v2
                     popStack(node); //pop v3
-                    pushStack(node, stack[0].clone()); //push v1's clone
+                    pushStack(node, stack[0].clone()); //push v1's cloneList
                     pushStack(node, stack[2]); //push v3
                     pushStack(node, stack[1]); //push v2
                     pushStack(node, stack[0]); //push v1
@@ -424,7 +474,7 @@ public class StackBranchInterpreter {
                     //v2, v1 -> v1, v2, v1
                     popStack(node); // pop v1
                     popStack(node); // pop v2
-                    pushStack(node, stack[0].clone()); //push clone v1
+                    pushStack(node, stack[0].clone()); //push cloneList v1
                     pushStack(node, stack[1]); //push v2
                     pushStack(node, stack[0]); //push v1
                 } else LOGGER.fatal("DUP X2 ANALYZER STACK ERROR");
@@ -451,8 +501,8 @@ public class StackBranchInterpreter {
                     popStack(node); //pop v1
                     popStack(node); //pop v2
                     popStack(node); //pop v3
-                    pushStack(node, stack[1].clone()); //push v2's clone
-                    pushStack(node, stack[0].clone()); //push v1's clone
+                    pushStack(node, stack[1].clone()); //push v2's cloneList
+                    pushStack(node, stack[0].clone()); //push v1's cloneList
                     pushStack(node, stack[2]); //push v3
                     pushStack(node, stack[1]); //push v2
                     pushStack(node, stack[0]); //push v1
@@ -461,7 +511,7 @@ public class StackBranchInterpreter {
                     ObjectType[] stack = collectStack(node, 2);
                     popStack(node); // pop v1
                     popStack(node); // pop v2
-                    pushStack(node, stack[0].clone()); //push clone v1
+                    pushStack(node, stack[0].clone()); //push cloneList v1
                     pushStack(node, stack[1]); //push v2
                     pushStack(node, stack[0]); //push v1
                 } else LOGGER.fatal("DUP2 X1 ANALYZER STACK ERROR");

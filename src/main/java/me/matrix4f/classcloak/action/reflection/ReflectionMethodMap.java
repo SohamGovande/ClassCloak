@@ -18,8 +18,8 @@ public class ReflectionMethodMap {
         map = new HashMap<>();
     }
 
-    public Boolean get(String key) {
-        return map.get(key);
+    public boolean get(String key) {
+        return map.getOrDefault(key, false);
     }
 
     public Boolean put(String key, Boolean value) {

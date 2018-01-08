@@ -43,9 +43,11 @@ public class LoadNecessaryClassesAction extends Action {
             //get the class' name
 
             List<String> list = new ArrayList<>();
-            List<String> add = extractClassesFrom(cpr, cpr.at(cmr.getClassIndex()));
-            if(add != null)
-                list.addAll(add);
+            if(cpr.at(cmr.getClassIndex()) instanceof ConstantClass) { //todo fix
+                List<String> add = extractClassesFrom(cpr, cpr.at(cmr.getClassIndex()));
+                if (add != null)
+                    list.addAll(add);
+            }
             String desc = ((ConstantUtf8) cpr.at(((ConstantNameAndType) cpr.at(cmr.getNatIndex())).getDescIndex())).getValue();
             list.addAll(BytecodeUtils.getInternalNamesUsedByMethodSignature(desc));
             return list;
