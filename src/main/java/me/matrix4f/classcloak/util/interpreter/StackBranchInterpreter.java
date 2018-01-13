@@ -111,25 +111,31 @@ public class StackBranchInterpreter {
     public LinkedList<AbstractInsnNode> observeStackBackward(AbstractInsnNode lastInsn, int preferredSize) {
         //work backward down the instruction list until the stack size is the same - get the instructions in the method call
         LinkedList<AbstractInsnNode> insns = new LinkedList<>();
-        insns.add(lastInsn);
 
         int currentStackSize = preferredSize;
 
         //label nodes / frame nodes / line numbers dont count as valid instructions
         boolean readInstruction = false;
-        AbstractInsnNode counter = lastInsn.getPrevious();
+        AbstractInsnNode counter = lastInsn;
 
         while(counter != null) {
+            boolean hasReadPush = false;
             if (counter.getOpcode() > 0) {
                 currentStackSize = getStackSizeAt(counter);
-                insns.addFirst(counter);
+                insns.add(counter);
+
                 readInstruction = true;
+                hasReadPush = getFirstActionOfNode(insns.getLast()).getOperationType() == StackAction.Type.PUSH;
             }
             counter = counter.getPrevious();
 
-            if(currentStackSize == preferredSize && readInstruction)
+            if(currentStackSize == preferredSize
+                    && readInstruction
+                    && (hasReadPush || counter == null))
                 break;
         }
+
+        Collections.reverse(insns);
 
         return insns;
     }
@@ -151,10 +157,14 @@ public class StackBranchInterpreter {
         LinkedList<AbstractInsnNode> list = new LinkedList<>();
         counter = firstInsn;
         while(counter != lastInsnWithPreferredStack) {
-            list.add(counter);
+            if(counter.getOpcode() > 0) {
+//                System.out.println(BytecodeUtils.getOpcodeName(counter.getOpcode()) + " " + getStackSizeAt(counter));
+                list.add(counter);
+            }
             counter = counter.getNext();
         }
         list.add(lastInsnWithPreferredStack);
+//        System.out.println("XDDDDDDDDDDDDDDD");
         return list;
     }
 
@@ -163,6 +173,14 @@ public class StackBranchInterpreter {
 //    private void interpretFrame(FrameNode node) {}
 
     //UTILITY METHODS FOR ANALYSIS
+
+    private StackAction getFirstActionOfNode(AbstractInsnNode source) {
+        return stackActions.stream()
+                .filter(action -> action.getSource() == source)
+                .findFirst()
+                .get();
+    }
+
     private void pushStack(AbstractInsnNode node, String desc) {
         pushStack(node, new ObjectType(ObjectType.Type.OBJECT, desc));
     }
@@ -390,40 +408,12 @@ public class StackBranchInterpreter {
                 pushStack(node, "D");
                 break;
             case IASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case LASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case FASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case DASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case AASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case BASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case CASTORE:
-                popStack(node);
-                popStack(node);
-                popStack(node);
-                break;
             case SASTORE:
                 popStack(node);
                 popStack(node);
@@ -870,7 +860,7 @@ public class StackBranchInterpreter {
         else if(node.cst instanceof String)
             pushStack(node, "Ljava/lang/String;");
         else if(node.cst instanceof Type)
-            pushStack(node, ((Type) node.cst).getDescriptor());
+            pushStack(node, "Ljava/lang/Class;");
     }
 
     private void interpretIincInsn(IincInsnNode node) {}

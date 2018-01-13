@@ -8,6 +8,7 @@ import org.objectweb.asm.tree.*;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,9 +62,34 @@ public class BytecodeUtils {
                 });
     }
 
+    public static void printOpcodes(List<AbstractInsnNode> nodes) {
+        nodes.stream()
+                .mapToInt(AbstractInsnNode::getOpcode)
+                .mapToObj(BytecodeUtils::getOpcodeName)
+                .filter(Objects::nonNull)
+                .forEach(System.out::println);
+    }
+
+    public static void printOpcodes(List<AbstractInsnNode> nodes, Function<String, String> mapper) {
+        nodes.stream()
+                .mapToInt(AbstractInsnNode::getOpcode)
+                .mapToObj(BytecodeUtils::getOpcodeName)
+                .filter(Objects::nonNull)
+                .map(mapper)
+                .forEach(System.out::println);
+    }
+
+    public static String getMethodInfo(AbstractInsnNode methodInsnNode) {
+        if(methodInsnNode instanceof MethodInsnNode) {
+            MethodInsnNode min = (MethodInsnNode) methodInsnNode;
+            return min.owner + '.' + min.name + min.desc;
+        }
+        return "";
+    }
+
     public static InsnList toList(List<AbstractInsnNode> list) {
         InsnList insns = new InsnList();
-        list.forEach(insns::add);
+        list.stream().filter(Objects::nonNull).forEach(insns::add);
         return insns;
     }
 

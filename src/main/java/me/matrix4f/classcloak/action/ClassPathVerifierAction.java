@@ -80,12 +80,8 @@ public class ClassPathVerifierAction extends Action {
         if(s.length() == 1) //primitive type
             return true;
         String finalS = s;
-        return (classpath.stream()
-                .filter(node -> node.name.equals(finalS))
-                .count() > 0) ||
-                (sourceClasses.stream()
-                .filter(node -> node.name.equals(finalS))
-                .count() > 0);
+        return (classpath.stream().anyMatch(node -> node.name.equals(finalS))) ||
+                (sourceClasses.stream().anyMatch(node -> node.name.equals(finalS)));
     }
 
     @Override

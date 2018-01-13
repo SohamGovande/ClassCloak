@@ -47,7 +47,9 @@ public class InsnCloneFactory {
             return (T) cloneJump((JumpInsnNode) node);
         if(node instanceof TypeInsnNode)
             return (T) cloneTypeInsn((TypeInsnNode) node);
-        System.err.println("BADNODE");
+        if(node instanceof LabelNode)
+            return node;
+        System.err.println("BADNODE " + node);
         return node;
     }
 
