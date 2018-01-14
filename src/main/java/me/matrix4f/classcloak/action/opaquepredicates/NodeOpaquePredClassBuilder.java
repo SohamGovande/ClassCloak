@@ -5,7 +5,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LabelNode;
 import me.matrix4f.classcloak.action.ObfGlobal;
-import me.matrix4f.classcloak.action.name.namecreation.ClassNameCreator;
+import me.matrix4f.classcloak.action.name.creation.ClassNameCreator;
 import me.matrix4f.classcloak.util.MethodBuilder;
 
 import static org.objectweb.asm.Opcodes.*;

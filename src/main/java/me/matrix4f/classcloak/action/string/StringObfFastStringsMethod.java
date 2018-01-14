@@ -6,10 +6,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.tree.ClassNode;
 import me.matrix4f.classcloak.ClassCloak;
-import me.matrix4f.classcloak.action.name.namecreation.ClassNameCreator;
+import me.matrix4f.classcloak.action.name.creation.ClassNameCreator;
 import me.matrix4f.classcloak.util.MethodBuilder;
-
-import java.util.Random;
 
 import static org.objectweb.asm.Opcodes.*;
 

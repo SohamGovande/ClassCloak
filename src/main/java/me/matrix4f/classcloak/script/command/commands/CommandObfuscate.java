@@ -56,7 +56,7 @@ public class CommandObfuscate extends Command {
                     actions.add(new StringObfuscateAction());
                     break;
                 }
-                case "line_numbers": {
+                case "lineNumbers": {
                     lineSettings.exclusions = CmdHelper.parseExclusionsFrom(this, children);
 
                     String modify = XMLUtils.findString(this, children, "modify").get(0);
@@ -64,7 +64,7 @@ public class CommandObfuscate extends Command {
                     actions.add(new LineNumberObfuscateAction());
                     break;
                 }
-                case "reflection_handling": {
+                case "reflectionHandling": {
                     reflectionSettings.inclusions = CmdHelper.parseTargetsFrom(this, children, "include");
 //                    reflectionSettings.hashFunction = XMLUtils.findString(this, children, "algorithm").get(0);
                     List<Element> xmlEntries = XMLUtils.stream(children)

@@ -1,22 +1,17 @@
 package me.matrix4f.classcloak.action.name;
 
-import me.matrix4f.classcloak.target.ClassHierarchy;
-import me.matrix4f.classcloak.util.interpreter.StackBranchInterpreter;
-import me.matrix4f.classcloak.util.interpreter.StackInterpreter;
 import org.objectweb.asm.tree.*;
 import me.matrix4f.classcloak.Action;
 import me.matrix4f.classcloak.Globals;
 import me.matrix4f.classcloak.action.ObfGlobal;
 import me.matrix4f.classcloak.action.ObfSettings;
-import me.matrix4f.classcloak.action.name.namecreation.ClassNameCreator;
-import me.matrix4f.classcloak.action.name.namecreation.FieldNameCreator;
-import me.matrix4f.classcloak.action.name.namecreation.MethodNameCreator;
-import me.matrix4f.classcloak.action.name.nameofbmap.ClassReference;
-import me.matrix4f.classcloak.action.name.nameofbmap.NameObfMap;
+import me.matrix4f.classcloak.action.name.creation.ClassNameCreator;
+import me.matrix4f.classcloak.action.name.creation.FieldNameCreator;
+import me.matrix4f.classcloak.action.name.creation.MethodNameCreator;
+import me.matrix4f.classcloak.action.name.map.ClassReference;
+import me.matrix4f.classcloak.action.name.map.NameObfMap;
 
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import static org.objectweb.asm.Opcodes.*;
 import static me.matrix4f.classcloak.action.ObfGlobal.manifest;

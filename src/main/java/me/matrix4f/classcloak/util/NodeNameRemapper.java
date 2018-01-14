@@ -3,7 +3,7 @@ package me.matrix4f.classcloak.util;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import me.matrix4f.classcloak.action.ObfGlobal;
-import me.matrix4f.classcloak.action.name.namecreation.MethodNameCreator;
+import me.matrix4f.classcloak.action.name.creation.MethodNameCreator;
 import me.matrix4f.classcloak.mapping.Mappings;
 import me.matrix4f.classcloak.mapping.Mappings.*;
 import me.matrix4f.classcloak.target.NodeTarget;
