@@ -1,0 +1,56 @@
+//ClassCloak v1.0 Mappings File
+
+me.matrix4f.test.Main -> ~Same~
+  Fields:
+    int asdf -> int a
+    java.lang.String data -> java.lang.String b
+  Methods:
+    void <clinit>() -> ~Same~
+    void <init>() -> ~Same~
+    void add(int, int) -> void a(int, int)
+    javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
+    void main(java.lang.String[]) -> ~Same~
+
+me.matrix4f.test.IBobRoss -> d
+  Methods:
+    javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
+
+me.matrix4f.test.asdfross -> a
+  Fields:
+    int asdf -> int a
+  Methods:
+    void <init>() -> ~Same~
+    javax.swing.JLabel bob(javax.swing.JLabel) -> javax.swing.JLabel a(javax.swing.JLabel)
+    javax.swing.JLabel bob2(javax.swing.JLabel) -> javax.swing.JLabel b(javax.swing.JLabel)
+    javax.swing.JLabel bob3(javax.swing.JLabel) -> javax.swing.JLabel c(javax.swing.JLabel)
+    javax.swing.JLabel bob4(javax.swing.JLabel) -> javax.swing.JLabel e(javax.swing.JLabel)
+    javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
+
+me.matrix4f.test.CRTest -> c
+  Methods:
+    void <init>() -> ~Same~
+    void bobRoss() -> void a()
+    java.lang.Object call() -> ~Same~
+    void run() -> ~Same~
+
+me.matrix4f.test.ComponentBuilder -> b
+  Fields:
+    javax.swing.JButton btn -> javax.swing.JButton b
+    javax.swing.JTextArea textArea -> javax.swing.JTextArea c
+    javax.swing.JLabel lbl -> javax.swing.JLabel a
+  Methods:
+    void <init>() -> ~Same~
+    void buildButton() -> void b()
+    void buildLabel() -> void a()
+    void buildTextArea() -> void c()
+    javax.swing.JButton getBtn() -> javax.swing.JButton e()
+    javax.swing.JLabel getLbl() -> javax.swing.JLabel d()
+    javax.swing.JTextArea getTextArea() -> javax.swing.JTextArea f()
+
+me.matrix4f.test.Win -> e
+  Fields:
+    javax.swing.JFrame frame -> javax.swing.JFrame a
+  Methods:
+    void <init>() -> ~Same~
+    javax.swing.JFrame getFrame() -> javax.swing.JFrame a()
+

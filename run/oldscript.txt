@@ -1,0 +1,20 @@
+input { file: "input.jar" }
+
+classpath {
+
+    places [
+        "C:\program files\java\jre1.8.0_151\lib\rt.jar"
+    ]
+}
+
+obfuscate {
+    name {
+        exclusions [
+            "me.matrix4f.test.Main:get (*)"
+        ]
+    }
+
+    line_numbers { modify: "delete" }
+}
+
+save { file: "output.jar" }

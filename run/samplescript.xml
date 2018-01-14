@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<classcloak>
+    <input>testjar.jar</input>
+
+    <classpath>
+        <entry>C:\Program Files\java\jre1.8.0_151\lib\rt.jar</entry>
+    </classpath>
+
+    <obfuscate>
+        <name>
+
+        </name>
+        <!--<reflectionHandling>
+            <include>*</include>
+            <include>*:*</include>
+
+            <entry>
+                <class_forName/>
+                <class_getDeclaredMethod/>
+                <class_getDeclaredField/>
+                <from>*:*</from>
+            </entry>
+
+        </reflectionHandling>-->
+    </obfuscate>
+
+    <saveMappings path="obfMappings.txt"/>
+
+    <save>obfuscatedJar.jar</save>
+</classcloak>
