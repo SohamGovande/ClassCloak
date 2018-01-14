@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <classcloak>
-    <input>testjar.jar</input>
+    <input path="testjar.jar"/>
 
     <classpath>
         <entry>C:\Program Files\java\jre1.8.0_151\lib\rt.jar</entry>
@@ -25,6 +25,5 @@
     </obfuscate>
 
     <saveMappings path="obfMappings.txt"/>
-
-    <save>obfuscatedJar.jar</save>
+    <save path="obfuscatedJar.jar"/>
 </classcloak>

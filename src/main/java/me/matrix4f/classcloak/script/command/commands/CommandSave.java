@@ -18,9 +18,11 @@ public class CommandSave extends Command {
 
     @Override
     protected void doExecution(Element cmdElem, NodeList args) throws CommandException {
-        XMLUtils.ensureNonNullText(this, cmdElem);
-
-        ObfGlobal.outputFile = new File(cmdElem.getTextContent());
-        ClassCloak.actions.add(new SaveAction());
+        if(cmdElem.hasAttribute("path")) {
+            ObfGlobal.outputFile = new File(cmdElem.getAttribute("path"));
+            ClassCloak.actions.add(new SaveAction());
+        } else {
+            throw new CommandException(this, "No path specified.");
+        }
     }
 }

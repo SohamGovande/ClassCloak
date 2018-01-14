@@ -9,6 +9,6 @@ public class CommandException extends Exception {
     }
 
     public CommandException(Command command, String msg) {
-        super("Command" + command.getName() + ": " + msg);
+        super("Command " + command.getName() + ": " + msg);
     }
 }

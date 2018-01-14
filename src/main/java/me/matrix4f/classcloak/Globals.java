@@ -7,5 +7,5 @@ public interface Globals {
 
     String NAME = "ClassCloak";
     String VERSION = "v1.0";
-    Logger LOGGER = Logger.create(Globals.NAME);
+    Logger LOGGER = Logger.create();
 }

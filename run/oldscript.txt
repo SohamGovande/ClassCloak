@@ -1,3 +1,7 @@
+ -------
+/  ----  \
+|  |   |_|
+
 input { file: "input.jar" }
 
 classpath {

@@ -17,19 +17,22 @@ public class CommandInput extends Command {
 
     @Override
     protected void doExecution(Element cmdElem, NodeList args) throws CommandException {
-        XMLUtils.ensureNonNullText(this, cmdElem);
-        String value = cmdElem.getTextContent();
+        if(cmdElem.hasAttribute("path")) {
+            String value = cmdElem.getAttribute("path");
 
-        int indexOfDot = value.lastIndexOf('.');
-        String extension = value.substring(indexOfDot + 1);
+            int indexOfDot = value.lastIndexOf('.');
+            String extension = value.substring(indexOfDot + 1);
 
-        if(!extension.equalsIgnoreCase("jar"))
-            throw new CommandException(this, "Only input JAR files, not " + extension.toUpperCase() + " files!");
+            if (!extension.equalsIgnoreCase("jar"))
+                throw new CommandException(this, "Only input JAR files, not " + extension.toUpperCase() + " files!");
 
-        File file = new File(value);
-        if(!file.exists())
-            throw new CommandException(this, file.getAbsolutePath() + " does not exist.");
+            File file = new File(value);
+            if (!file.exists())
+                throw new CommandException(this, file.getAbsolutePath() + " does not exist.");
 
-        ObfGlobal.inputFile = file;
+            ObfGlobal.inputFile = file;
+        } else {
+            throw new CommandException(this, "No path specified.");
+        }
     }
 }

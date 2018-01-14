@@ -9,6 +9,7 @@ import me.matrix4f.classcloak.action.ObfGlobal;
 import me.matrix4f.classcloak.action.SaveAction;
 import me.matrix4f.classcloak.script.ScriptHandler;
 import me.matrix4f.classcloak.util.FileIOUtils;
+import me.matrix4f.logging.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -27,6 +28,7 @@ public class ClassCloak {
     public static List<Action> actions = new ArrayList<>();
 
     public static void main(String[] args) {
+        Logger.printLogo();
 //        if(1 == 1)
 //            return;
 

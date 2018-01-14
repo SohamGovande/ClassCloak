@@ -51,7 +51,7 @@ public class MethodBuilder {
                 node.start.getLabel(), node.end.getLabel(), node.handler.getLabel(), node.type
         ));
 
-        BytecodeUtils.writeMethodInsns(insnList, mv);
+        BytecodeUtils.visitAll(insnList, mv);
 
         localVars.forEach(v -> mv.visitLocalVariable(v.name, v.desc, v.signature, v.start.getLabel(), v.end.getLabel(), v.index));
 

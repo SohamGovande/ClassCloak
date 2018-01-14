@@ -47,8 +47,8 @@ public class ScriptHandler {
             Document doc = db.parse(new ByteArrayInputStream(fileData.getBytes()));
 
             Element root = (Element) doc.getChildNodes().item(0);
-            for(Node cmdNode : XMLUtils.stream(root.getChildNodes()).collect(Collectors.toList())) {
-                if(cmdNode.getNodeType() != Node.ELEMENT_NODE)
+            for (Node cmdNode : XMLUtils.stream(root.getChildNodes()).collect(Collectors.toList())) {
+                if (cmdNode.getNodeType() != Node.ELEMENT_NODE)
                     continue;
                 Element cmdElem = (Element) cmdNode;
                 int index;
@@ -61,9 +61,11 @@ public class ScriptHandler {
                     LOGGER.fatal("No command found by name " + cmdElem.getTagName());
                 }
             }
+        } catch (CommandException e) {
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();
-            throw new CommandException("Error parsing script : " + e.getClass() + ": " + e.getMessage());
+            throw new CommandException("Unknown error parsing script : " + e.getClass() + ": " + e.getMessage());
         }
     }
 
@@ -74,7 +76,8 @@ public class ScriptHandler {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (CommandException e) {
-            System.err.println(e.getMessage());
+            LOGGER.fatal(e.getMessage());
+//            System.err.println(e.getMessage());
         }
     }
 }
