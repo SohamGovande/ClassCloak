@@ -22,8 +22,8 @@ public class ReflectionMethodMap {
         return map.getOrDefault(key, false);
     }
 
-    public Boolean put(String key, Boolean value) {
-        return map.put(key, value);
+    public void put(String key, Boolean value) {
+        map.put(key, value);
     }
 
     @Override

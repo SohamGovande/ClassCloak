@@ -86,8 +86,9 @@ public class CommandObfuscate extends Command {
                                 .filter(node -> node.getNodeType() == Node.ELEMENT_NODE)
                                 .map(node -> (Element) node)
                                 .filter(elem -> methods.contains(elem.getTagName()))
-                                .filter(elem -> elem.hasAttribute("remap"))
-                                .forEach(element1 -> map.put(element1.getTagName(), Boolean.parseBoolean(element1.getAttribute("remap"))));
+//                                .filter(elem -> elem.hasAttribute("remap"))
+//                                .forEach(element1 -> map.put(element1.getTagName(), Boolean.parseBoolean(element1.getAttribute("remap"))))
+                                .forEach(element1 -> map.put(element1.getTagName(), true));
                         reflectionSettings.entries.add(new ReflectionEntry(targets, map));
                     }
                     if(reflectionSettings.inclusions.size() == 0) {

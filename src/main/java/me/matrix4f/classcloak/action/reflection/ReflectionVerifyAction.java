@@ -109,6 +109,42 @@ public class ReflectionVerifyAction extends Action {
         }
     }
 
+    private void performClassGetFieldChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        List<MethodInsnNode> invokers = new LinkedList<>();
+        if(map.get(ReflectionMethodMap.CLASS_GETFIELD))
+            invokers.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getField(Ljava/lang/String;)Ljava/lang/reflect/Field;"));
+        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
+            invokers.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getDeclaredField(Ljava/lang/String;)Ljava/lang/reflect/Field;"));
+
+        if(invokers.size() == 0)
+            return;
+
+        StackInterpreter methodInterpreter = new StackInterpreter(parent.name, context);
+        methodInterpreter.interpret();
+
+        for(MethodInsnNode invoker : invokers) {
+            List<StackBranchInterpreter> validBranches = methodInterpreter.allBranchesContaining(invoker).collect(Collectors.toList());
+            for(StackBranchInterpreter interpreter : validBranches) {
+                int stackSizePrior = interpreter.getStackSizeAt(invoker);
+                LinkedList<AbstractInsnNode> statementInsns = interpreter.observeStackBackward(invoker, stackSizePrior);
+
+                LinkedList<AbstractInsnNode> createClassInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior);
+                LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+1);
+                createClassInsns.forEach(createStringInsns::remove);
+
+                InsnList insns = context.instructions;
+
+                InsnList inject = new InsnList();
+                inject.add(toList(cloneList(createClassInsns)));
+                inject.add(toList(cloneList(createStringInsns)));
+                inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapFieldName, unmapFieldDesc, false));
+
+                insns.insertBefore(createStringInsns.getFirst(), inject);
+                createStringInsns.forEach(insns::remove);
+            }
+        }
+    }
+
     private void performEdits(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
         if(map.get(ReflectionMethodMap.CLASS_FORNAME))
             performClassForNameChanges(reflectionClass, parent, map, context);
@@ -116,6 +152,8 @@ public class ReflectionVerifyAction extends Action {
         if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD) || map.get(ReflectionMethodMap.CLASS_GETMETHOD))
             performClassGetMethodOrDeclaredMethodChanges(reflectionClass, parent, map, context);
 
+        if(map.get(ReflectionMethodMap.CLASS_GETFIELD) || map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
+            performClassGetFieldChanges(reflectionClass, parent, map, context);
     }
 
     private void generateReflectionObjectAccessorWithDesc(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
@@ -203,7 +241,7 @@ public class ReflectionVerifyAction extends Action {
     }
 
     private String encrypt(String in) {
-    return /*USE_HASH ? StringUtils.sha256(in) :*/ in;
+        return /*USE_HASH ? StringUtils.sha256(in) :*/ in;
     }
 
     private void generateClinit(ClassWriter cw,
