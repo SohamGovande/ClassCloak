@@ -1,6 +1,5 @@
 package me.matrix4f.classcloak.action.reflection;
 
-import me.matrix4f.classcloak.util.StringUtils;
 import me.matrix4f.classcloak.util.interpreter.StackBranchInterpreter;
 import me.matrix4f.classcloak.util.interpreter.StackInterpreter;
 import org.objectweb.asm.*;
@@ -33,7 +32,7 @@ import static me.matrix4f.classcloak.action.ObfGlobal.reflectionSettings;
 //todo
 public class ReflectionVerifyAction extends Action {
 
-    private static final boolean USE_HASH = false;
+//    private static final boolean USE_HASH = false;
 
     private static String hashMethodName, hashMethodDesc,
                         unmapMethodNameName, unmapMethodNameDesc,
@@ -60,54 +59,62 @@ public class ReflectionVerifyAction extends Action {
         ObfGlobal.sourceClasses.add(reflectionClass);
     }
 
-    private void performEdits(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
-        if(map.get(ReflectionMethodMap.CLASS_FORNAME)) {
-            BytecodeUtils.streamInstructions(MethodInsnNode.class, context)
-                    .filter(insn -> insn.name.equals("forName") && insn.desc.equals("(Ljava/lang/String;)Ljava/lang/Class;") && insn.owner.equals("java/lang/Class"))
-                    .forEach(node -> {
-                        context.instructions.insertBefore(node, new MethodInsnNode(
-                                INVOKESTATIC, reflectionClass.name, unmapClassName, unmapClassDesc, false
-                        ));
-                    });
-        }
-        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD)) {
-            List<MethodInsnNode> declaredMethodCalls = BytecodeUtils.streamInstructions(MethodInsnNode.class, context)
-                    .filter(insn -> insn.name.equals("getDeclaredMethod") && insn.desc.equals("(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;") && insn.owner.equals("java/lang/Class"))
-                    .collect(Collectors.toList());
+    private void performClassForNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.forName(Ljava/lang/String;)Ljava/lang/Class;")
+                .forEach(node ->
+                        context.instructions.insertBefore(node, new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapClassName, unmapClassDesc, false))
+                );
+    }
 
-            if(declaredMethodCalls.size() == 0)
-                return;
+    private void performClassGetMethodOrDeclaredMethodChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        List<MethodInsnNode> declaredMethodCalls = new LinkedList<>();
+        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD))
+            declaredMethodCalls.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getDeclaredMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"));
+        if(map.get(ReflectionMethodMap.CLASS_GETMETHOD))
+            declaredMethodCalls.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"));
 
-            StackInterpreter methodInterpreter = new StackInterpreter(parent.name, context);
-            methodInterpreter.interpret();
+        if(declaredMethodCalls.size() == 0)
+            return;
 
-            for(MethodInsnNode invoker : declaredMethodCalls) {
-                List<StackBranchInterpreter> interpreters = methodInterpreter.allBranchesContaining(invoker).collect(Collectors.toList());
-                for(StackBranchInterpreter interpreter : interpreters) {
-                    int stackSizePrior = interpreter.getStackSizeAt(invoker);
+        StackInterpreter methodInterpreter = new StackInterpreter(parent.name, context);
+        methodInterpreter.interpret();
 
-                    LinkedList<AbstractInsnNode> statementInsns = interpreter.observeStackBackward(invoker, stackSizePrior);
+        for(MethodInsnNode invoker : declaredMethodCalls) {
+            List<StackBranchInterpreter> interpreters = methodInterpreter.allBranchesContaining(invoker).collect(Collectors.toList());
+            for(StackBranchInterpreter interpreter : interpreters) {
+                int stackSizePrior = interpreter.getStackSizeAt(invoker);
 
-                    LinkedList<AbstractInsnNode> createClassInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior);
-                    LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+1);
-                    LinkedList<AbstractInsnNode> createArrayInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+2);
+                LinkedList<AbstractInsnNode> statementInsns = interpreter.observeStackBackward(invoker, stackSizePrior);
 
-                    createArrayInsns.removeAll(createStringInsns);
-                    createStringInsns.removeAll(createClassInsns);
+                LinkedList<AbstractInsnNode> createClassInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior);
+                LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+1);
+                LinkedList<AbstractInsnNode> createArrayInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+2);
 
-                    InsnList insns = context.instructions;
+                createArrayInsns.removeAll(createStringInsns);
+                createStringInsns.removeAll(createClassInsns);
 
-                    InsnList inject = new InsnList();
-                    inject.add(toList(cloneList(createClassInsns)));
-                    inject.add(toList(cloneList(createStringInsns)));
-                    inject.add(toList(cloneList(createArrayInsns)));
-                    inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, descBuilderName, descBuilderDesc, false));
-                    inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapMethodDescName, unmapMethodDescDesc, false));
-                    insns.insert(createStringInsns.getFirst(), inject);
-                    createStringInsns.forEach(insns::remove);
-                }
+                InsnList insns = context.instructions;
+
+                InsnList inject = new InsnList();
+                inject.add(toList(cloneList(createClassInsns)));
+                inject.add(toList(cloneList(createStringInsns)));
+//                    if(USE_HASH)
+//                        inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, hashMethodName, hashMethodDesc, false));
+                inject.add(toList(cloneList(createArrayInsns)));
+                inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, descBuilderName, descBuilderDesc, false));
+                inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapMethodDescName, unmapMethodDescDesc, false));
+                insns.insert(createStringInsns.getFirst(), inject);
+                createStringInsns.forEach(insns::remove);
             }
         }
+    }
+
+    private void performEdits(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        if(map.get(ReflectionMethodMap.CLASS_FORNAME))
+            performClassForNameChanges(reflectionClass, parent, map, context);
+
+        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD))
+            performClassGetMethodOrDeclaredMethodChanges(reflectionClass, parent, map, context);
     }
 
     private void generateReflectionObjectAccessorWithDesc(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
@@ -195,7 +202,7 @@ public class ReflectionVerifyAction extends Action {
     }
 
     private String encrypt(String in) {
-        return USE_HASH ? StringUtils.sha256(in) : in;
+    return /*USE_HASH ? StringUtils.sha256(in) :*/ in;
     }
 
     private void generateClinit(ClassWriter cw,
@@ -378,7 +385,7 @@ public class ReflectionVerifyAction extends Action {
                 .label(l0)
 
                 .ldc("SHA-256")
-                .invokestatic("java/security/MessageDigest","newInstance","(Ljava/lang/String;)Ljava/security/MessageDigest;")
+                .invokestatic("java/security/MessageDigest","getInstance","(Ljava/lang/String;)Ljava/security/MessageDigest;")
 
                 .aload(0)
                 .ldc("UTF-8")
@@ -726,7 +733,7 @@ public class ReflectionVerifyAction extends Action {
         generateReflectionObjectNoDesc(cw, unmapFieldName = "a", unmapFieldDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc, opqPredName, opqPredDesc);
         generateReflectionObjectNoDesc(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
         generateReflectionObjectAccessorWithDesc(cw, unmapMethodDescName = "a", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
-        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
+//        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
         generateClassAccessor(cw, unmapClassName = "b", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
         generateDescBuilder(cw, descBuilderName = "a", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
 

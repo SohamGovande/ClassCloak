@@ -87,6 +87,22 @@ public class BytecodeUtils {
         return "";
     }
 
+    public static List<MethodInsnNode> getInvokers(InsnList list, String target) {
+        return Stream.of(list.toArray())
+                .filter(node -> doesNodeInvoke(node, target))
+                .map(node -> (MethodInsnNode) node)
+                .collect(Collectors.toList());
+    }
+
+    public static boolean doesNodeInvoke(AbstractInsnNode node, String target) {
+        if(!(node instanceof MethodInsnNode))
+            return false;
+        MethodInsnNode min = (MethodInsnNode) node;
+        String simplified = min.owner + '.' + min.name + min.desc;
+        return simplified.equals(target);
+    }
+
+
     public static InsnList toList(List<AbstractInsnNode> list) {
         InsnList insns = new InsnList();
         list.stream().filter(Objects::nonNull).forEach(insns::add);
