@@ -40,6 +40,7 @@ public class BytecodeUtils {
         primitivesNameMap.put('Z',"boolean");
         primitivesNameMap.put('J',"long");
         primitivesNameMap.put('S',"short");
+        primitivesNameMap.put('V',"void");
 
         newarrayTypeMap.put(T_INT,      "I");
         newarrayTypeMap.put(T_CHAR,     "C");
@@ -263,7 +264,7 @@ public class BytecodeUtils {
         return cn.name.replace('/','.');
     }
 
-    public static String convertMethodDescriptorToReadable(String desc) {
+    public static String convertMethodDescriptorToJava(String desc) {
         StringBuilder sb = new StringBuilder("(");
         Stream.of(Type.getArgumentTypes(desc))
                 .map(Type::getDescriptor)
@@ -275,6 +276,7 @@ public class BytecodeUtils {
         }
         sb.append(')');
         sb.append(convertDescriptorToJavaName(Type.getReturnType(desc).getDescriptor()));
+
         return sb.toString();
     }
 

@@ -1,0 +1,6 @@
+// ClassCloak Mappings
+
+me.matrix4f.test.Main -> <SAME>
+    func main(String[]) -> a(String[])
+    func add(int,IBobRoss) -> a(int, b)
+    field bobRoss *int* -> a *int*

@@ -1,10 +1,7 @@
 package me.matrix4f.classcloak.script;
 
 import me.matrix4f.classcloak.script.command.api.Command;
-import me.matrix4f.classcloak.script.command.commands.CommandClasspath;
-import me.matrix4f.classcloak.script.command.commands.CommandInput;
-import me.matrix4f.classcloak.script.command.commands.CommandObfuscate;
-import me.matrix4f.classcloak.script.command.commands.CommandSave;
+import me.matrix4f.classcloak.script.command.commands.*;
 import me.matrix4f.classcloak.script.parsing.CommandException;
 import me.matrix4f.classcloak.util.XMLUtils;
 import org.apache.commons.io.IOUtils;
@@ -35,7 +32,8 @@ public class ScriptHandler {
                 new CommandObfuscate(),
                 new CommandInput(),
                 new CommandSave(),
-                new CommandClasspath()
+                new CommandClasspath(),
+                new CommandSaveMappings()
         );
     }
 

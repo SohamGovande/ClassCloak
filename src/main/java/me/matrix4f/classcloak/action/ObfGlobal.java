@@ -28,6 +28,8 @@ public class ObfGlobal {
     public static List<ClassNode> classpath = new ArrayList<>();
     public static List<JarFileEntry> classpathJarEntries = new ArrayList<>();
 
+    public static File mappingsSaveFile = null;
+
     public static List<ClassNode> allClasses() {
         ArrayList<ClassNode> nodes = new ArrayList<>(sourceClasses);
         nodes.addAll(classpath);
