@@ -113,8 +113,9 @@ public class ReflectionVerifyAction extends Action {
         if(map.get(ReflectionMethodMap.CLASS_FORNAME))
             performClassForNameChanges(reflectionClass, parent, map, context);
 
-        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD))
+        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD) || map.get(ReflectionMethodMap.CLASS_GETMETHOD))
             performClassGetMethodOrDeclaredMethodChanges(reflectionClass, parent, map, context);
+
     }
 
     private void generateReflectionObjectAccessorWithDesc(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
