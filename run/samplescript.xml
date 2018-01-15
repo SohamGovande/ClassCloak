@@ -19,7 +19,11 @@
                 <class_forName/>
                 <class_getDeclaredMethod/>
                 <class_getDeclaredField/>
+                <class_getMethod/>
+                <class_getField/>
                 <field_getName/>
+                <method_getName/>
+                <class_getName/>
 
                 <from>*:*</from>
             </entry>

@@ -1,7 +1,6 @@
 package me.matrix4f.classcloak.util;
 
 import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.tree.*;
 
@@ -28,7 +27,7 @@ public class MethodBuilder {
         return new MethodBuilder();
     }
 
-    public static void newEmptyConstructorExtendingObject(String className, ClassWriter cv) {
+    public static void newEmptyConstructorExtendingObject(String className, ClassVisitor cv) {
         newBuilder()
                 .label(0)
                 .aload(0) //this

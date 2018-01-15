@@ -61,6 +61,14 @@ public class ReflectionVerifyAction extends Action {
         ObfGlobal.sourceClasses.add(reflectionClass);
     }
 
+    private void performMethodGetNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        List<MethodInsnNode> invokers = BytecodeUtils.getInvokers(context.instructions, "java/lang/reflect/Method.getName()Ljava/lang/String;");
+        for (MethodInsnNode invoker : invokers) {
+            context.instructions.insert(invoker, new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapMethodNameBackwardName, unmapMethodNameBackwardDesc, false));
+            context.instructions.remove(invoker);
+        }
+    }
+
     private void performFieldGetNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
         List<MethodInsnNode> invokers = BytecodeUtils.getInvokers(context.instructions, "java/lang/reflect/Field.getName()Ljava/lang/String;");
         for (MethodInsnNode invoker : invokers) {
@@ -167,9 +175,12 @@ public class ReflectionVerifyAction extends Action {
 
         if(map.get(ReflectionMethodMap.FIELD_GETNAME))
             performFieldGetNameChanges(reflectionClass, parent, map, context);
+
+        if(map.get(ReflectionMethodMap.METHOD_GETNAME))
+            performMethodGetNameChanges(reflectionClass, parent, map, context);
     }
 
-    private void generateReflectionObjectAccessorWithDesc(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
+    private void generateMethodAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
         MethodBuilder mw = MethodBuilder.newBuilder();
 
         LabelNode noKey = new LabelNode();
@@ -257,7 +268,7 @@ public class ReflectionVerifyAction extends Action {
         return /*USE_HASH ? StringUtils.sha256(in) :*/ in;
     }
 
-    private void generateClinit(ClassWriter cw,
+    private void generateClinit(ClassVisitor cw,
                                 String className,
                                 String fieldMapName, String fieldMapDesc,
                                 String methodDescMapName, String methodDescMapDesc,
@@ -459,7 +470,7 @@ public class ReflectionVerifyAction extends Action {
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
-    private void generateFieldAccessor(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
+    private void generateFieldAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
         MethodBuilder mw = MethodBuilder.newBuilder();
         LabelNode beginMethod = new LabelNode();
         LabelNode forLoopEnd = new LabelNode();
@@ -495,7 +506,7 @@ public class ReflectionVerifyAction extends Action {
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
-    private void generateClassAccessor(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
+    private void generateClassAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
         LabelNode l0 = new LabelNode();
         LabelNode l1 = new LabelNode();
         LabelNode l2 = new LabelNode();
@@ -523,7 +534,7 @@ public class ReflectionVerifyAction extends Action {
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
-    private void generateDescBuilder(ClassWriter cw, String methodName, String methodDesc, String opqPredName, String opqPredDesc, String className) {
+    private void generateDescBuilder(ClassVisitor cw, String methodName, String methodDesc, String opqPredName, String opqPredDesc, String className) {
         LabelNode afterForLoop = new LabelNode();
         LabelNode forLoopCheck = new LabelNode();
         LabelNode whileLoopCheck = new LabelNode();
@@ -749,7 +760,7 @@ public class ReflectionVerifyAction extends Action {
         Type.getDescriptor(int[].class);
     }
 
-    private void generateFieldNameBackwardAccessor(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
+    private void generateFieldNameBackwardAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
         MethodBuilder mw = MethodBuilder.newBuilder();
         LabelNode beginMethod = new LabelNode();
         LabelNode doesContainKey = new LabelNode();
@@ -774,9 +785,6 @@ public class ReflectionVerifyAction extends Action {
                 .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
                 .areturn()
 
-                .label()
-                .line(2)
-
                 .label(doesContainKey)
                 .aload(2)
                 .checkcast("java/util/Map")
@@ -792,9 +800,6 @@ public class ReflectionVerifyAction extends Action {
                 .aload(3)
                 .arraylength()
                 .icmpGEQUAL(afterForLoop)
-
-                .label()
-                .line(3)
 
                 .aload(3)
                 .iload(4)
@@ -826,16 +831,119 @@ public class ReflectionVerifyAction extends Action {
                 .label(returnStatement)
                 .areturn()
 
+                .localVar("","L;",null,beginMethod, returnStatement, 0)
+                .localVar("","L;",null,beginMethod, returnStatement, 1)
+                .localVar("","L;",null,beginMethod, returnStatement, 2)
+                .localVar("","L;",null,beginMethod, returnStatement, 3)
+                .localVar("","L;",null,beginMethod, returnStatement, 4)
+                .localVar("","L;",null,beginMethod, returnStatement, 5)
+
+                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+    }
+
+    private void generateMethodNameBackwardAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
+        MethodBuilder mw = MethodBuilder.newBuilder();
+        LabelNode beginMethod = new LabelNode();
+        LabelNode doesContainKey = new LabelNode();
+        LabelNode returnStatement = new LabelNode();
+        LabelNode forLoopCheck = new LabelNode(), afterForLoop = new LabelNode(), continueBranch = new LabelNode();
+
+        mw.label(beginMethod)
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Method","getDeclaringClass","()Ljava/lang/Class;")
+                .astore(1)
+
+                .getstatic(className, mapName, mapDesc)
+                .aload(1)
+                .aconst_null()
+
+                .invokeinterface("java/util/Map", "getOrDefault", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                .astore(2)
+                .aload(2)
+                .ifnonnnull(doesContainKey)
+
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Method","getName","()Ljava/lang/String;")
+                .areturn()
+
+                .label(doesContainKey)
+
+                .aload(2)
+                .checkcast("java/util/Map")
+                .invokeinterface("java/util/Map","entrySet","()Ljava/util/Set;")
+                .invokeinterface("java/util/Set","toArray","()[Ljava/lang/Object;")
+                .astore(3)
+
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Method","getParameterTypes","()[Ljava/lang/Class;")
+                .invokestatic(className, descBuilderName, descBuilderDesc)
+                .astore(6)
+
+                .iconst_0()
+                .istore(4)
+
+                .label(forLoopCheck)
+                .iload(4)
+                .aload(3)
+                .arraylength()
+                .icmpGEQUAL(afterForLoop)
+
+                .aload(3)
+                .iload(4)
+                .aaload()
+                .checkcast("java/util/Map$Entry")
+                .astore(5)
+
+                .aload(5)
+                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .checkcast("[Ljava/lang/String;")
+                .iconst_0()
+                .aaload()
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Method","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .ifeq(continueBranch)
+
+                .aload(5)
+                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .checkcast("[Ljava/lang/String;")
+                .iconst_1()
+                .aaload()
+                .aload(6)
+                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .ifeq(continueBranch)
+
+                .aload(5)
+                .invokeinterface("java/util/Map$Entry","getKey","()Ljava/lang/Object;")
+                .checkcast("[Ljava/lang/String;")
+                .iconst_0()
+                .aaload()
+                .areturn()
+
+                .label(continueBranch)
+                .iinc(4, 1)
+                .goto_(forLoopCheck)
+                .label(afterForLoop)
+
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Method","getName","()Ljava/lang/String;")
+
+                .label(returnStatement)
+                .areturn()
+
 //                .localVar("","L;",null,beginMethod, returnStatement, 0)
 //                .localVar("","L;",null,beginMethod, returnStatement, 1)
 //                .localVar("","L;",null,beginMethod, returnStatement, 2)
+//                .localVar("","L;",null,beginMethod, returnStatement, 3)
+//                .localVar("","L;",null,beginMethod, returnStatement, 4)
+//                .localVar("","L;",null,beginMethod, returnStatement, 5)
 
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private ClassNode generateClass() {
         String className = ClassNameCreator.instance.getName(null);
-        ClassWriter cw = new ClassWriter(0);
+        ClassNode cw = new ClassNode();
 
         cw.visit(52, ACC_PUBLIC + ACC_SUPER, className, null, "java/lang/Object", null);
         cw.visitSource("maps.java",null);
@@ -867,52 +975,25 @@ public class ReflectionVerifyAction extends Action {
         MethodBuilder.newEmptyConstructorExtendingObject(className, cw);
 
         generateClinit(cw, className, fieldMapName, fieldMapDesc, methodDescMapName, methodDescMapDesc, methodMapName, methodMapDesc, classMapName, classMapDesc, opqPredName, opqPredDesc);
+
         generateFieldAccessor(cw, unmapFieldName = "discordapp", unmapFieldDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
-//        generateFieldAccessor(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
-        generateReflectionObjectAccessorWithDesc(cw, unmapMethodDescName = "dubmo", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
-//        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
+        generateMethodAccessor(cw, unmapMethodDescName = "dubmo", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
         generateClassAccessor(cw, unmapClassName = "princess", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
+
         generateDescBuilder(cw, descBuilderName = "frog", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
+
         generateFieldNameBackwardAccessor(cw,unmapFieldNameBackwardName = "unmapFieldnameBackward", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
+        generateMethodNameBackwardAccessor(cw, unmapMethodNameBackwardName = "unmapMethodnameBackward", unmapMethodNameBackwardDesc = "(Ljava/lang/reflect/Method;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc);
 
-        cw.visitEnd();
+//        generateFieldAccessor(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
+//        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
 
-        ClassReader reader = new ClassReader(cw.toByteArray());
-        ClassNode node = new ClassNode();
-        reader.accept(node, 0);
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        cw.accept(writer);
 
-        /*List<ClassNode> classNodes = ObfGlobal.classes;
-        String mainClass = manifest == null ? "" : //will result to it being ignored
-                manifest.getMainAttributes()
-                        .entrySet()
-                        .stream()
-                        .filter(e-> e.getKey().toString().startsWith("Main-Class"))
-                        .map(e-> e.getValue().toString())
-                        .findFirst()
-                        .orElse("")
-                        .replace('.','/');
-
-        for(int i = 0; i < classNodes.size(); i++) {
-            ClassNode classNode = classNodes.get(i);
-            boolean isMainClass = classNode.name.equals(mainClass);
-            for(int j = 0; j < classNodes.get(i).methods.size(); j++) {
-                MethodNode method = classNodes.get(i).methods.get(j);
-
-                //is main method
-                if(isMainClass && method.access == ACC_PUBLIC+ACC_STATIC && method.name.equals("main") && method.desc.equals("([Ljava/lang/String;)V")) {
-                    InsnList il = MethodBuilder.newBuilder()
-//                            .getstatic("java/lang/System","out","Ljava/io/PrintStream;")
-//                            .invokestatic(className, m)
-//
-//                            .invokevirtual("java/io/PrintStream","println","(Ljava/lang/String;)V")
-                            .getInstructions();
-
-                    il.add(method.instructions);
-                    method.instructions = il;
-                }
-            }
-        }*/
-        return node;
+        ClassNode result = new ClassNode();
+        new ClassReader(writer.toByteArray()).accept(result, 0);
+        return result;
     }
 
 }
