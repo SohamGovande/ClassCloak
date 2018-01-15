@@ -41,7 +41,8 @@ public class ReflectionVerifyAction extends Action {
                         unmapClassName, unmapClassDesc,
                         descBuilderName, descBuilderDesc,
                         unmapFieldNameBackwardName, unmapFieldNameBackwardDesc,
-                        unmapMethodNameBackwardName, unmapMethodNameBackwardDesc;
+                        unmapMethodNameBackwardName, unmapMethodNameBackwardDesc,
+                        unmapClassNameBackwardName, unmapClassNameBackwardDesc;
 
     @Override
     public void execute() {
@@ -59,6 +60,14 @@ public class ReflectionVerifyAction extends Action {
                         }
 
         ObfGlobal.sourceClasses.add(reflectionClass);
+    }
+
+    private void performClassGetNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        List<MethodInsnNode> invokers = BytecodeUtils.getInvokers(context.instructions, "java/lang/reflect/Class.getName()Ljava/lang/String;");
+        for (MethodInsnNode invoker : invokers) {
+            context.instructions.insert(invoker, new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapClassNameBackwardName, unmapClassNameBackwardDesc, false));
+            context.instructions.remove(invoker);
+        }
     }
 
     private void performMethodGetNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
@@ -178,6 +187,9 @@ public class ReflectionVerifyAction extends Action {
 
         if(map.get(ReflectionMethodMap.METHOD_GETNAME))
             performMethodGetNameChanges(reflectionClass, parent, map, context);
+
+        if(map.get(ReflectionMethodMap.CLASS_GETNAME))
+            performClassGetNameChanges(reflectionClass, parent, map, context);
     }
 
     private void generateMethodAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
@@ -941,6 +953,21 @@ public class ReflectionVerifyAction extends Action {
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
+    private void generateClassNameBackwardAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
+        MethodBuilder.newBuilder()
+                .getstatic(className, mapName, mapDesc)
+
+                .aload(0)
+                .invokevirtual("java/lang/Class","getName","()Ljava/lang/String;")
+                .aload(0)
+                .invokevirtual("java/lang/Class","getName","()Ljava/lang/String;")
+                .invokeinterface("java/util/Map","getOrDefault","(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                .checkcast("java/lang/String")
+
+                .areturn()
+                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+    }
+
     private ClassNode generateClass() {
         String className = ClassNameCreator.instance.getName(null);
         ClassNode cw = new ClassNode();
@@ -984,6 +1011,7 @@ public class ReflectionVerifyAction extends Action {
 
         generateFieldNameBackwardAccessor(cw,unmapFieldNameBackwardName = "unmapFieldnameBackward", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
         generateMethodNameBackwardAccessor(cw, unmapMethodNameBackwardName = "unmapMethodnameBackward", unmapMethodNameBackwardDesc = "(Ljava/lang/reflect/Method;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc);
+        generateClassNameBackwardAccessor(cw, unmapClassNameBackwardName = "unmapClassnameBakward",unmapClassNameBackwardDesc = "(Ljava/lang/Class;)Ljava/lang/String;", className, classMapName, classMapDesc);
 
 //        generateFieldAccessor(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
 //        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
