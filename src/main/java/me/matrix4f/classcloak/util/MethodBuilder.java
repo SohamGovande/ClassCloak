@@ -799,4 +799,13 @@ public class MethodBuilder {
         insnList.add(new InsnNode(ARRAYLENGTH));
         return this;
     }
+
+    public MethodBuilder line(int i) {
+        insnList.add(new LineNumberNode(i, labels.get(labels.size()-1)));
+        return this;
+    }
+
+    public MethodBuilder label() {
+        return label(0);
+    }
 }

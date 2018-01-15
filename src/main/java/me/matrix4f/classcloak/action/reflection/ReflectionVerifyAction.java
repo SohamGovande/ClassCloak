@@ -39,7 +39,9 @@ public class ReflectionVerifyAction extends Action {
                         unmapMethodDescName, unmapMethodDescDesc,
                         unmapFieldName, unmapFieldDesc,
                         unmapClassName, unmapClassDesc,
-                        descBuilderName, descBuilderDesc;
+                        descBuilderName, descBuilderDesc,
+                        unmapFieldNameBackwardName, unmapFieldNameBackwardDesc,
+                        unmapMethodNameBackwardName, unmapMethodNameBackwardDesc;
 
     @Override
     public void execute() {
@@ -57,6 +59,14 @@ public class ReflectionVerifyAction extends Action {
                         }
 
         ObfGlobal.sourceClasses.add(reflectionClass);
+    }
+
+    private void performFieldGetNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
+        List<MethodInsnNode> invokers = BytecodeUtils.getInvokers(context.instructions, "java/lang/reflect/Field.getName()Ljava/lang/String;");
+        for (MethodInsnNode invoker : invokers) {
+            context.instructions.insert(invoker, new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapFieldNameBackwardName, unmapFieldNameBackwardDesc, false));
+            context.instructions.remove(invoker);
+        }
     }
 
     private void performClassForNameChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
@@ -154,6 +164,9 @@ public class ReflectionVerifyAction extends Action {
 
         if(map.get(ReflectionMethodMap.CLASS_GETFIELD) || map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
             performClassGetFieldChanges(reflectionClass, parent, map, context);
+
+        if(map.get(ReflectionMethodMap.FIELD_GETNAME))
+            performFieldGetNameChanges(reflectionClass, parent, map, context);
     }
 
     private void generateReflectionObjectAccessorWithDesc(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
@@ -446,7 +459,7 @@ public class ReflectionVerifyAction extends Action {
                 .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
     }
 
-    private void generateReflectionObjectNoDesc(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc, String opqPredName, String opqPredDesc) {
+    private void generateFieldAccessor(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
         MethodBuilder mw = MethodBuilder.newBuilder();
         LabelNode beginMethod = new LabelNode();
         LabelNode forLoopEnd = new LabelNode();
@@ -465,7 +478,7 @@ public class ReflectionVerifyAction extends Action {
                 .aload(2)
                 .checkcast("java/util/Map")
                 .aload(1)
-                .invokevirtual("java/util/Map","get","(Ljava/lang/Object;)Ljava/lang/Object;")
+                .invokeinterface("java/util/Map","get","(Ljava/lang/Object;)Ljava/lang/Object;")
                 .goto_(returnStatement)
 
                 .label(forLoopEnd)
@@ -736,11 +749,96 @@ public class ReflectionVerifyAction extends Action {
         Type.getDescriptor(int[].class);
     }
 
+    private void generateFieldNameBackwardAccessor(ClassWriter cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
+        MethodBuilder mw = MethodBuilder.newBuilder();
+        LabelNode beginMethod = new LabelNode();
+        LabelNode doesContainKey = new LabelNode();
+        LabelNode returnStatement = new LabelNode();
+        LabelNode forLoopCheck = new LabelNode(), afterForLoop = new LabelNode(), continueBranch = new LabelNode();
+
+        mw.label(beginMethod)
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Field","getDeclaringClass","()Ljava/lang/Class;")
+                .astore(1)
+
+                .getstatic(className, mapName, mapDesc)
+                .aload(1)
+                .aconst_null()
+
+                .invokeinterface("java/util/Map", "getOrDefault", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                .astore(2)
+                .aload(2)
+                .ifnonnnull(doesContainKey)
+
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
+                .areturn()
+
+                .label()
+                .line(2)
+
+                .label(doesContainKey)
+                .aload(2)
+                .checkcast("java/util/Map")
+                .invokeinterface("java/util/Map","entrySet","()Ljava/util/Set;")
+                .invokeinterface("java/util/Set","toArray","()[Ljava/lang/Object;")
+                .astore(3)
+
+                .iconst_0()
+                .istore(4)
+
+                .label(forLoopCheck)
+                .iload(4)
+                .aload(3)
+                .arraylength()
+                .icmpGEQUAL(afterForLoop)
+
+                .label()
+                .line(3)
+
+                .aload(3)
+                .iload(4)
+                .aaload()
+                .checkcast("java/util/Map$Entry")
+                .astore(5)
+
+                .aload(5)
+                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .checkcast("java/lang/String")
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .ifeq(continueBranch)
+
+                .aload(5)
+                .invokeinterface("java/util/Map$Entry","getKey","()Ljava/lang/Object;")
+                .checkcast("java/lang/String")
+                .areturn()
+
+                .label(continueBranch)
+                .iinc(4, 1)
+                .goto_(forLoopCheck)
+                .label(afterForLoop)
+
+                .aload(0)
+                .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
+
+                .label(returnStatement)
+                .areturn()
+
+//                .localVar("","L;",null,beginMethod, returnStatement, 0)
+//                .localVar("","L;",null,beginMethod, returnStatement, 1)
+//                .localVar("","L;",null,beginMethod, returnStatement, 2)
+
+                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+    }
+
     private ClassNode generateClass() {
         String className = ClassNameCreator.instance.getName(null);
         ClassWriter cw = new ClassWriter(0);
 
         cw.visit(52, ACC_PUBLIC + ACC_SUPER, className, null, "java/lang/Object", null);
+        cw.visitSource("maps.java",null);
 
         String fieldMapName = "a",
                 fieldMapDesc = "Ljava/util/HashMap;";
@@ -769,12 +867,13 @@ public class ReflectionVerifyAction extends Action {
         MethodBuilder.newEmptyConstructorExtendingObject(className, cw);
 
         generateClinit(cw, className, fieldMapName, fieldMapDesc, methodDescMapName, methodDescMapDesc, methodMapName, methodMapDesc, classMapName, classMapDesc, opqPredName, opqPredDesc);
-        generateReflectionObjectNoDesc(cw, unmapFieldName = "a", unmapFieldDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc, opqPredName, opqPredDesc);
-        generateReflectionObjectNoDesc(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
-        generateReflectionObjectAccessorWithDesc(cw, unmapMethodDescName = "a", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
+        generateFieldAccessor(cw, unmapFieldName = "discordapp", unmapFieldDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
+//        generateFieldAccessor(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
+        generateReflectionObjectAccessorWithDesc(cw, unmapMethodDescName = "dubmo", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
 //        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");
-        generateClassAccessor(cw, unmapClassName = "b", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
-        generateDescBuilder(cw, descBuilderName = "a", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
+        generateClassAccessor(cw, unmapClassName = "princess", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
+        generateDescBuilder(cw, descBuilderName = "frog", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
+        generateFieldNameBackwardAccessor(cw,unmapFieldNameBackwardName = "unmapFieldnameBackward", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
 
         cw.visitEnd();
 

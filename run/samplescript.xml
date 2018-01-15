@@ -10,20 +10,23 @@
         <name>
 
         </name>
-        <!--<reflectionHandling>
+        <reflectionHandling>
             <include>*</include>
             <include>*:*</include>
+            <include>*#*</include>
 
             <entry>
                 <class_forName/>
                 <class_getDeclaredMethod/>
                 <class_getDeclaredField/>
+                <field_getName/>
+
                 <from>*:*</from>
             </entry>
 
-        </reflectionHandling>-->
+        </reflectionHandling>
     </obfuscate>
 
     <saveMappings path="obfMappings.txt"/>
-    <save path="obfuscatedJar.jar"/>
+    <save path="outputFileObf.jar"/>
 </classcloak>

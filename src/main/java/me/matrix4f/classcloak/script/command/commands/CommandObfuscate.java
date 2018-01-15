@@ -79,7 +79,7 @@ public class CommandObfuscate extends Command {
                                 .filter(node -> node instanceof MethodNodeTarget)
                                 .map(node -> (MethodNodeTarget) node)
                                 .collect(Collectors.toList());
-                        List<String> methods = Arrays.asList(CLASS_GETDECLAREDFIELD,CLASS_GETDECLAREDMETHOD,CLASS_GETFIELD,CLASS_GETMETHOD,CLASS_FORNAME);
+                        List<String> methods = Arrays.asList(CLASS_GETDECLAREDFIELD,CLASS_GETDECLAREDMETHOD,CLASS_GETFIELD,CLASS_GETMETHOD,CLASS_FORNAME,FIELD_GETNAME,CLASS_GETNAME,METHOD_GETNAME);
                         ReflectionMethodMap map = new ReflectionMethodMap();
 
                         XMLUtils.stream(childs)
