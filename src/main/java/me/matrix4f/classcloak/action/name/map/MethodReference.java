@@ -1,6 +1,6 @@
 package me.matrix4f.classcloak.action.name.map;
 
-import jdk.internal.org.objectweb.asm.Type;
+import org.objectweb.asm.Type;
 import me.matrix4f.classcloak.util.BytecodeUtils;
 
 public class MethodReference {

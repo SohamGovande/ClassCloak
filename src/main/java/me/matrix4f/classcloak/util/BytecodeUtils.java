@@ -1,6 +1,6 @@
 package me.matrix4f.classcloak.util;
 
-import jdk.internal.org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -49,24 +49,24 @@ public class BytecodeUtils {
 
     static {
         //Initialize primtivesNameMap
-        primitivesNameMap.put('I',"int");
-        primitivesNameMap.put('F',"float");
-        primitivesNameMap.put('B',"byte");
-        primitivesNameMap.put('C',"char");
-        primitivesNameMap.put('D',"double");
-        primitivesNameMap.put('Z',"boolean");
-        primitivesNameMap.put('J',"long");
-        primitivesNameMap.put('S',"short");
-        primitivesNameMap.put('V',"void");
+        primitivesNameMap.put('I', "int");
+        primitivesNameMap.put('F', "float");
+        primitivesNameMap.put('B', "byte");
+        primitivesNameMap.put('C', "char");
+        primitivesNameMap.put('D', "double");
+        primitivesNameMap.put('Z', "boolean");
+        primitivesNameMap.put('J', "long");
+        primitivesNameMap.put('S', "short");
+        primitivesNameMap.put('V', "void");
         //Initialize newarrayTypeMap
-        newarrayTypeMap.put(T_INT,      "I");
-        newarrayTypeMap.put(T_CHAR,     "C");
-        newarrayTypeMap.put(T_BOOLEAN,  "Z");
-        newarrayTypeMap.put(T_BYTE,     "B");
-        newarrayTypeMap.put(T_LONG,     "J");
-        newarrayTypeMap.put(T_DOUBLE,   "D");
-        newarrayTypeMap.put(T_SHORT,    "S");
-        newarrayTypeMap.put(T_FLOAT,    "F");
+        newarrayTypeMap.put(T_INT, "I");
+        newarrayTypeMap.put(T_CHAR, "C");
+        newarrayTypeMap.put(T_BOOLEAN, "Z");
+        newarrayTypeMap.put(T_BYTE, "B");
+        newarrayTypeMap.put(T_LONG, "J");
+        newarrayTypeMap.put(T_DOUBLE, "D");
+        newarrayTypeMap.put(T_SHORT, "S");
+        newarrayTypeMap.put(T_FLOAT, "F");
 
         //Initialize opcodes map
         List<Field> fields = Arrays.asList(Opcodes.class.getDeclaredFields());
@@ -85,6 +85,7 @@ public class BytecodeUtils {
 
     /**
      * A debug method to print the opcode mnemonics of the specified nodes
+     *
      * @param nodes The instructions to be printed
      */
     public static void printOpcodes(List<AbstractInsnNode> nodes) {
@@ -95,10 +96,28 @@ public class BytecodeUtils {
                 .forEach(System.out::println);
     }
 
+    public static Integer getIntValue(AbstractInsnNode node) {
+        if (node instanceof IntInsnNode && node.getOpcode() != NEWARRAY)
+            return ((IntInsnNode) node).operand;
+
+        if (node instanceof InsnNode) {
+            int opcode = node.getOpcode();
+            for (int i = ICONST_M1; i <= ICONST_5; i++)
+                if (opcode == i)
+                    return opcode - ICONST_M1 - 1;
+        }
+
+        if (node instanceof LdcInsnNode && ((LdcInsnNode) node).cst instanceof Integer)
+            return (Integer) ((LdcInsnNode) node).cst;
+
+        return null;
+    }
+
     /**
      * A debug method to print the opcode mnemonics of the specified nodes
      * after passing the names through a function.
-     * @param nodes The instructions to be printed
+     *
+     * @param nodes  The instructions to be printed
      * @param mapper The function which the names will be passed through
      */
     public static void printOpcodes(List<AbstractInsnNode> nodes, Function<String, String> mapper) {
@@ -112,12 +131,13 @@ public class BytecodeUtils {
 
     /**
      * Returns a human-readable version of a method instruction
+     *
      * @param methodInsnNode The instruction which to interpret
      * @return An empty string if it isn't a MethodInsnNode, or a string
      * in the format com/package/Class.methodName(MethodDescriptor)ReturnType
      */
     public static String getMethodInfo(AbstractInsnNode methodInsnNode) {
-        if(methodInsnNode instanceof MethodInsnNode) {
+        if (methodInsnNode instanceof MethodInsnNode) {
             MethodInsnNode min = (MethodInsnNode) methodInsnNode;
             return min.owner + '.' + min.name + min.desc;
         }
@@ -125,7 +145,7 @@ public class BytecodeUtils {
     }
 
     /**
-     * @param list The haystack in which to search
+     * @param list   The haystack in which to search
      * @param target The needle (target method) which search for
      * @return All instructions in the target instruction set that invoke the
      * target method
@@ -138,12 +158,12 @@ public class BytecodeUtils {
     }
 
     /**
-     * @param node The node being compared
+     * @param node   The node being compared
      * @param target The target method which to search for invokers of
      * @return Whether the target instruction node invokes the target method
      */
     public static boolean doesNodeInvoke(AbstractInsnNode node, String target) {
-        if(!(node instanceof MethodInsnNode))
+        if (!(node instanceof MethodInsnNode))
             return false;
         MethodInsnNode min = (MethodInsnNode) node;
         String simplified = min.owner + '.' + min.name + min.desc;
@@ -152,6 +172,7 @@ public class BytecodeUtils {
 
     /**
      * Converts a Java List to an ASM InsnList
+     *
      * @param list The Java List
      * @return An ASM InsnList containing the same instructions as the Java List
      */
@@ -163,6 +184,7 @@ public class BytecodeUtils {
 
     /**
      * Converts an opcode number to its human-readable mnemonic
+     *
      * @param opcode The opcode number
      * @return A human-readable mnemonic
      */
@@ -174,30 +196,31 @@ public class BytecodeUtils {
      * @return A map that maps a primitive type name to its corresponding descriptor
      */
     public static HashMap<String, Character> getNamePrimitivesMap() {
-        HashMap<String,Character> map = new HashMap<>();
-        primitivesNameMap.forEach((character, s) -> map.put(s,character));
+        HashMap<String, Character> map = new HashMap<>();
+        primitivesNameMap.forEach((character, s) -> map.put(s, character));
         return map;
     }
 
     /**
      * Constructs a list from the specified instruction, then filters through
      * that list to obtain all labels.
+     *
      * @param node The instruction whose list's labels will be returned
      * @return A list of labels in the same InsnList as the specified node
      */
     public static List<LabelNode> getLabelsInList(AbstractInsnNode node) {
         AbstractInsnNode counter = node;
-        while(counter.getPrevious() != null)
+        while (counter.getPrevious() != null)
             counter = counter.getPrevious();
 
         List<LabelNode> list = new ArrayList<>();
 
-        if(counter instanceof LabelNode)
+        if (counter instanceof LabelNode)
             list.add((LabelNode) counter);
 
-        while(counter.getNext() != null) {
+        while (counter.getNext() != null) {
             counter = counter.getNext();
-            if(counter instanceof LabelNode)
+            if (counter instanceof LabelNode)
                 list.add((LabelNode) counter);
         }
 
@@ -206,19 +229,20 @@ public class BytecodeUtils {
 
     /**
      * Constructs a list of all instructions in the same list as the specified instruction
+     *
      * @param node The specified instruction
      * @return A list of all instructions in the same list as the specified instruction
      */
     public static List<AbstractInsnNode> getInsnsInList(AbstractInsnNode node) {
         AbstractInsnNode counter = node;
-        while(counter.getPrevious() != null)
+        while (counter.getPrevious() != null)
             counter = counter.getPrevious();
 
         List<AbstractInsnNode> list = new ArrayList<>();
 
         list.add(counter);
 
-        while(counter.getNext() != null) {
+        while (counter.getNext() != null) {
             counter = counter.getNext();
             list.add(counter);
         }
@@ -227,22 +251,23 @@ public class BytecodeUtils {
     }
 
     /**
-     * @param clazz The class of the specified instruction type
+     * @param clazz  The class of the specified instruction type
      * @param method The method whose instructions will be searched
-     * @param <T> The instruction class type
+     * @param <T>    The instruction class type
      * @return A stream of the MethodNode's instructions matching the specified class type
      */
     public static <T extends AbstractInsnNode> Stream<T> streamInstructions(Class<T> clazz, MethodNode method) {
         return Arrays.stream(method.instructions.toArray())
                 .filter(node -> node.getClass() == clazz)
-                .map(node-> (T) node);
+                .map(node -> (T) node);
     }
 
     /**
      * Allows integration between the Tree API and the Visitor API
      * by running .accept() on all instructions.
+     *
      * @param insnList The set of all instructions which will be accepted into the MethodVisitor
-     * @param mv The visitor which will accept the instructions
+     * @param mv       The visitor which will accept the instructions
      */
     public static void visitAll(InsnList insnList, MethodVisitor mv) {
         Arrays.stream(insnList.toArray())
@@ -252,6 +277,7 @@ public class BytecodeUtils {
     /**
      * Converts a Java name to a descriptor, but doesn't have the preceding L
      * before it.
+     *
      * @param name The Java name of the type
      * @return A corresponding descriptor without a preceding L
      */
@@ -259,8 +285,8 @@ public class BytecodeUtils {
         StringBuilder builder = new StringBuilder(name);
         int arrays = 0;
         int arrayIndex;
-        while((arrayIndex = builder.indexOf("[]")) != -1) {
-            builder.delete(arrayIndex, arrayIndex+2);
+        while ((arrayIndex = builder.indexOf("[]")) != -1) {
+            builder.delete(arrayIndex, arrayIndex + 2);
             arrays++;
         }
         String noArrays = builder.toString();
@@ -270,10 +296,10 @@ public class BytecodeUtils {
                 .map(Map.Entry::getKey)
                 .findFirst();
         StringBuilder desc = new StringBuilder();
-        for(int i = 0; i < arrays; i++)
+        for (int i = 0; i < arrays; i++)
             desc.append("[");
 
-        if(primitive.isPresent()) {
+        if (primitive.isPresent()) {
             desc.append(primitive.get());
         } else {
             desc.append(noArrays);
@@ -287,10 +313,10 @@ public class BytecodeUtils {
      * else, returns the class name in format com/mycompany/Class
      */
     public static String getInternalNameOfDescriptor(String desc) {
-        desc = desc.replace("[","");
-        if(desc.length() == 1)
+        desc = desc.replace("[", "");
+        if (desc.length() == 1)
             return null;
-        return desc.substring(1,desc.length()-1);
+        return desc.substring(1, desc.length() - 1);
     }
 
     /**
@@ -307,13 +333,14 @@ public class BytecodeUtils {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         String returnTypeName = getInternalNameOfDescriptor(returnType.getDescriptor());
-        if(returnTypeName != null)
+        if (returnTypeName != null)
             internalNames.add(returnTypeName);
         return internalNames;
     }
 
     /**
      * Converts a Java name into an internal descriptor
+     *
      * @param name The Java type name
      * @return A corresponding descriptor
      */
@@ -321,21 +348,21 @@ public class BytecodeUtils {
         StringBuilder builder = new StringBuilder(name);
         int arrays = 0;
         int arrayIndex;
-        while((arrayIndex = builder.indexOf("[]")) != -1) {
-            builder.delete(arrayIndex, arrayIndex+2);
+        while ((arrayIndex = builder.indexOf("[]")) != -1) {
+            builder.delete(arrayIndex, arrayIndex + 2);
             arrays++;
         }
-        String noArrays = builder.toString().replace('.','/');
+        String noArrays = builder.toString().replace('.', '/');
         Optional<Character> primitive = primitivesNameMap.entrySet()
                 .stream()
                 .filter(e -> e.getValue().equalsIgnoreCase(noArrays))
                 .map(Map.Entry::getKey)
                 .findFirst();
         StringBuilder desc = new StringBuilder();
-        for(int i = 0; i < arrays; i++)
+        for (int i = 0; i < arrays; i++)
             desc.append("[");
 
-        if(primitive.isPresent()) {
+        if (primitive.isPresent()) {
             desc.append(primitive.get());
         } else {
             desc.append("L").append(noArrays).append(";");
@@ -346,15 +373,15 @@ public class BytecodeUtils {
     /**
      * @param javaName The Java type name
      * @return The amount of array dimensions in it.<br>
-     *     Example:<br>
-     *         int[][] returns 2, int[] returns 1, int returns 0
+     * Example:<br>
+     * int[][] returns 2, int[] returns 1, int returns 0
      */
     public static int getArrayDimensionsInJavaName(String javaName) {
         StringBuilder builder = new StringBuilder(javaName);
         int arrays = 0;
         int arrayIndex;
-        while((arrayIndex = builder.indexOf("[]")) != -1) {
-            builder.delete(arrayIndex, arrayIndex+2);
+        while ((arrayIndex = builder.indexOf("[]")) != -1) {
+            builder.delete(arrayIndex, arrayIndex + 2);
             arrays++;
         }
         return arrays;
@@ -363,12 +390,12 @@ public class BytecodeUtils {
     /**
      * @param desc The type descriptor
      * @return The amount of array dimensions in it<br>
-     *     Example:<br>
-     *         [I returns 1, [[[Ljava/lang/Object; returns 3, J returns 0
+     * Example:<br>
+     * [I returns 1, [[[Ljava/lang/Object; returns 3, J returns 0
      */
     public static int getArrayDimensionsInDescriptor(String desc) {
         int arrays = 0;
-        while(desc.charAt(0) == '[') {
+        while (desc.charAt(0) == '[') {
             desc = desc.substring(1);
             arrays++;
         }
@@ -380,7 +407,7 @@ public class BytecodeUtils {
      * @return The Java name of the class node (without slashes, but instead .s)
      */
     public static String getJavaName(ClassNode cn) {
-        return cn.name.replace('/','.');
+        return cn.name.replace('/', '.');
     }
 
     /**
@@ -394,7 +421,7 @@ public class BytecodeUtils {
                 .map(Type::getDescriptor)
                 .map(BytecodeUtils::convertDescriptorToJavaName)
                 .forEach(s -> sb.append(s).append(", "));
-        if(sb.toString().endsWith(", ")) {
+        if (sb.toString().endsWith(", ")) {
             sb.deleteCharAt(sb.length() - 1);
             sb.deleteCharAt(sb.length() - 1);
         }
@@ -410,21 +437,21 @@ public class BytecodeUtils {
      */
     public static String convertDescriptorToJavaName(String desc) {
         int brackets = 0;
-        while(desc.charAt(0) == '[') {
+        while (desc.charAt(0) == '[') {
             brackets++;
             desc = desc.substring(1);
         }
 
         String internalName;
-        if(desc.charAt(desc.length()-1) == ';') internalName = desc.substring(1,desc.length()-1);
-        else                                    internalName = desc;
+        if (desc.charAt(desc.length() - 1) == ';') internalName = desc.substring(1, desc.length() - 1);
+        else internalName = desc;
 
         if (internalName.length() == 1) //primitive
             internalName = primitivesNameMap.get(internalName.charAt(0));
         else
-            internalName = internalName.replace('/','.');
+            internalName = internalName.replace('/', '.');
 
-        for(int i = 0; i < brackets; i++)
+        for (int i = 0; i < brackets; i++)
             internalName += "[]";
 
         return internalName;

@@ -27,7 +27,6 @@ import static me.matrix4f.classcloak.action.ObfGlobal.reflectionSettings;
 
 /**
  * Maps certain things into a class and retrieves those values at runtime
- *
  */
 //todo
 public class ReflectionVerifyAction extends Action {
@@ -35,24 +34,24 @@ public class ReflectionVerifyAction extends Action {
 //    private static final boolean USE_HASH = false;
 
     private static String hashMethodName, hashMethodDesc,
-                        unmapMethodNameName, unmapMethodNameDesc,
-                        unmapMethodDescName, unmapMethodDescDesc,
-                        unmapFieldName, unmapFieldDesc,
-                        unmapClassName, unmapClassDesc,
-                        descBuilderName, descBuilderDesc,
-                        unmapFieldNameBackwardName, unmapFieldNameBackwardDesc,
-                        unmapMethodNameBackwardName, unmapMethodNameBackwardDesc,
-                        unmapClassNameBackwardName, unmapClassNameBackwardDesc;
+            unmapMethodNameName, unmapMethodNameDesc,
+            unmapMethodDescName, unmapMethodDescDesc,
+            unmapFieldName, unmapFieldDesc,
+            unmapClassName, unmapClassDesc,
+            descBuilderName, descBuilderDesc,
+            unmapFieldNameBackwardName, unmapFieldNameBackwardDesc,
+            unmapMethodNameBackwardName, unmapMethodNameBackwardDesc,
+            unmapClassNameBackwardName, unmapClassNameBackwardDesc;
 
     @Override
     public void execute() {
         LOGGER.info("Running smart reflection...");
         ClassNode reflectionClass = generateClass();
 
-        for(ReflectionEntry entry : reflectionSettings.entries)
-            for(ClassNode clazz : sourceClasses)
-                for(MethodNode method : clazz.methods)
-                    if(entry.getFrom().stream().anyMatch(node -> node.doesExcludeNode(method, clazz)))
+        for (ReflectionEntry entry : reflectionSettings.entries)
+            for (ClassNode clazz : sourceClasses)
+                for (MethodNode method : clazz.methods)
+                    if (entry.getFrom().stream().anyMatch(node -> node.doesExcludeNode(method, clazz)))
                         try {
                             performEdits(reflectionClass, clazz, entry.getMethodMap(), method);
                         } catch (Exception e) {
@@ -95,27 +94,27 @@ public class ReflectionVerifyAction extends Action {
 
     private void performClassGetMethodOrDeclaredMethodChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
         List<MethodInsnNode> declaredMethodCalls = new LinkedList<>();
-        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD))
+        if (map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD))
             declaredMethodCalls.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getDeclaredMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"));
-        if(map.get(ReflectionMethodMap.CLASS_GETMETHOD))
-            declaredMethodCalls.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"));
+        if (map.get(ReflectionMethodMap.CLASS_GETMETHOD))
+            declaredMethodCalls.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getMethod(Ljava/l   ang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"));
 
-        if(declaredMethodCalls.size() == 0)
+        if (declaredMethodCalls.size() == 0)
             return;
 
         StackInterpreter methodInterpreter = new StackInterpreter(parent.name, context);
         methodInterpreter.interpret();
 
-        for(MethodInsnNode invoker : declaredMethodCalls) {
+        for (MethodInsnNode invoker : declaredMethodCalls) {
             List<StackBranchInterpreter> interpreters = methodInterpreter.allBranchesContaining(invoker).collect(Collectors.toList());
-            for(StackBranchInterpreter interpreter : interpreters) {
+            for (StackBranchInterpreter interpreter : interpreters) {
                 int stackSizePrior = interpreter.getStackSizeAt(invoker);
 
                 LinkedList<AbstractInsnNode> statementInsns = interpreter.observeStackBackward(invoker, stackSizePrior);
 
                 LinkedList<AbstractInsnNode> createClassInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior);
-                LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+1);
-                LinkedList<AbstractInsnNode> createArrayInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+2);
+                LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior + 1);
+                LinkedList<AbstractInsnNode> createArrayInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior + 2);
 
                 createArrayInsns.removeAll(createStringInsns);
                 createStringInsns.removeAll(createClassInsns);
@@ -127,8 +126,12 @@ public class ReflectionVerifyAction extends Action {
                 inject.add(toList(cloneList(createStringInsns)));
 //                    if(USE_HASH)
 //                        inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, hashMethodName, hashMethodDesc, false));
-                inject.add(toList(cloneList(createArrayInsns)));
-                inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, descBuilderName, descBuilderDesc, false));
+                if(!Optimization.isBasicArray(createArrayInsns)) {
+                    inject.add(toList(cloneList(createArrayInsns)));
+                    inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, descBuilderName, descBuilderDesc, false));
+                } else {
+                    inject.add(new LdcInsnNode(Optimization.classArrayToDescriptor(createArrayInsns)));
+                }
                 inject.add(new MethodInsnNode(INVOKESTATIC, reflectionClass.name, unmapMethodDescName, unmapMethodDescDesc, false));
                 insns.insert(createStringInsns.getFirst(), inject);
                 createStringInsns.forEach(insns::remove);
@@ -138,25 +141,25 @@ public class ReflectionVerifyAction extends Action {
 
     private void performClassGetFieldChanges(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
         List<MethodInsnNode> invokers = new LinkedList<>();
-        if(map.get(ReflectionMethodMap.CLASS_GETFIELD))
+        if (map.get(ReflectionMethodMap.CLASS_GETFIELD))
             invokers.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getField(Ljava/lang/String;)Ljava/lang/reflect/Field;"));
-        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
+        if (map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
             invokers.addAll(BytecodeUtils.getInvokers(context.instructions, "java/lang/Class.getDeclaredField(Ljava/lang/String;)Ljava/lang/reflect/Field;"));
 
-        if(invokers.size() == 0)
+        if (invokers.size() == 0)
             return;
 
         StackInterpreter methodInterpreter = new StackInterpreter(parent.name, context);
         methodInterpreter.interpret();
 
-        for(MethodInsnNode invoker : invokers) {
+        for (MethodInsnNode invoker : invokers) {
             List<StackBranchInterpreter> validBranches = methodInterpreter.allBranchesContaining(invoker).collect(Collectors.toList());
-            for(StackBranchInterpreter interpreter : validBranches) {
+            for (StackBranchInterpreter interpreter : validBranches) {
                 int stackSizePrior = interpreter.getStackSizeAt(invoker);
                 LinkedList<AbstractInsnNode> statementInsns = interpreter.observeStackBackward(invoker, stackSizePrior);
 
                 LinkedList<AbstractInsnNode> createClassInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior);
-                LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior+1);
+                LinkedList<AbstractInsnNode> createStringInsns = interpreter.observeStackForward(statementInsns.getFirst(), statementInsns.getLast(), stackSizePrior + 1);
                 createClassInsns.forEach(createStringInsns::remove);
 
                 InsnList insns = context.instructions;
@@ -173,22 +176,22 @@ public class ReflectionVerifyAction extends Action {
     }
 
     private void performEdits(ClassNode reflectionClass, ClassNode parent, ReflectionMethodMap map, MethodNode context) {
-        if(map.get(ReflectionMethodMap.CLASS_FORNAME))
+        if (map.get(ReflectionMethodMap.CLASS_FORNAME))
             performClassForNameChanges(reflectionClass, parent, map, context);
 
-        if(map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD) || map.get(ReflectionMethodMap.CLASS_GETMETHOD))
+        if (map.get(ReflectionMethodMap.CLASS_GETDECLAREDMETHOD) || map.get(ReflectionMethodMap.CLASS_GETMETHOD))
             performClassGetMethodOrDeclaredMethodChanges(reflectionClass, parent, map, context);
 
-        if(map.get(ReflectionMethodMap.CLASS_GETFIELD) || map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
+        if (map.get(ReflectionMethodMap.CLASS_GETFIELD) || map.get(ReflectionMethodMap.CLASS_GETDECLAREDFIELD))
             performClassGetFieldChanges(reflectionClass, parent, map, context);
 
-        if(map.get(ReflectionMethodMap.FIELD_GETNAME))
+        if (map.get(ReflectionMethodMap.FIELD_GETNAME))
             performFieldGetNameChanges(reflectionClass, parent, map, context);
 
-        if(map.get(ReflectionMethodMap.METHOD_GETNAME))
+        if (map.get(ReflectionMethodMap.METHOD_GETNAME))
             performMethodGetNameChanges(reflectionClass, parent, map, context);
 
-        if(map.get(ReflectionMethodMap.CLASS_GETNAME))
+        if (map.get(ReflectionMethodMap.CLASS_GETNAME))
             performClassGetNameChanges(reflectionClass, parent, map, context);
     }
 
@@ -204,7 +207,7 @@ public class ReflectionVerifyAction extends Action {
                 .getstatic(className, mapName, mapDesc)
                 .aload(0)
                 .aconst_null()
-                .invokeinterface("java/util/Map","getOrDefault","(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                .invokeinterface("java/util/Map", "getOrDefault", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                 .astore(3)
 
                 .aload(3)
@@ -212,8 +215,8 @@ public class ReflectionVerifyAction extends Action {
 
                 .aload(3)
                 .checkcast("java/util/Map")
-                .invokeinterface("java/util/Map","entrySet","()Ljava/util/Set;")
-                .invokeinterface("java/util/Set","toArray","()[Ljava/lang/Object;")
+                .invokeinterface("java/util/Map", "entrySet", "()Ljava/util/Set;")
+                .invokeinterface("java/util/Set", "toArray", "()[Ljava/lang/Object;")
                 .astore(4)
 
                 .iconst_0()
@@ -229,7 +232,7 @@ public class ReflectionVerifyAction extends Action {
                 .iload(5)
                 .aaload()
                 .checkcast("java/util/Map$Entry")
-                .invokeinterface("java/util/Map$Entry","getKey","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getKey", "()Ljava/lang/Object;")
                 .checkcast("[Ljava/lang/String;")
                 .astore(6)
 
@@ -237,28 +240,28 @@ public class ReflectionVerifyAction extends Action {
                 .iconst_0()
                 .aaload()
                 .aload(1)
-                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .invokevirtual("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
                 .ifeq(continueBranch)
 
                 .aload(6)
                 .iconst_1()
                 .aaload()
                 .aload(2)
-                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .invokevirtual("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
                 .ifeq(continueBranch)
 
                 .aload(4)
                 .iload(5)
                 .aaload()
                 .checkcast("java/util/Map$Entry")
-                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getValue", "()Ljava/lang/Object;")
                 .checkcast("[Ljava/lang/String;")
                 .iconst_0()
                 .aaload()
                 .areturn()
 
                 .label(continueBranch)
-                .iinc(5,1)
+                .iinc(5, 1)
                 .goto_(forLoopCheck)
 
                 .label(noKey)
@@ -273,7 +276,7 @@ public class ReflectionVerifyAction extends Action {
                 .localVar("", "L;", null, firstLbl, lastLbl, 4)
                 .localVar("", "L;", null, firstLbl, lastLbl, 5)
 
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private String encrypt(String in) {
@@ -309,13 +312,13 @@ public class ReflectionVerifyAction extends Action {
                 .invokespecial("java/util/HashMap")
                 .putstatic(className, methodDescMapName, methodDescMapDesc);
 
-        for(Map.Entry<ClassNode, ClassReference> entry : NameObfMap.Classes.entrySet()) {
+        for (Map.Entry<ClassNode, ClassReference> entry : NameObfMap.Classes.entrySet()) {
             //store in class map
-            if(reflectionSettings.shouldInclude(entry.getKey()) &&
+            if (reflectionSettings.shouldInclude(entry.getKey()) &&
                     !entry.getValue().oldName.equals(entry.getValue().newName)) {
                 mw.getstatic(className, classMapName, classMapDesc)
-                        .ldc(encrypt(entry.getValue().oldName.replace('/','.')))
-                        .ldc(entry.getValue().newName.replace('/','.'))
+                        .ldc(encrypt(entry.getValue().oldName.replace('/', '.')))
+                        .ldc(entry.getValue().newName.replace('/', '.'))
                         .invokevirtual("java/util/HashMap", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                         .pop();
             }
@@ -337,14 +340,14 @@ public class ReflectionVerifyAction extends Action {
                     .filter(e -> reflectionSettings.shouldInclude(e.getKey(), entry.getKey()))
                     .collect(Collectors.toList());
 
-            if(fields.size() > 0) {
+            if (fields.size() > 0) {
                 mw.new_("java/util/HashMap")
                         .dup()
                         .invokespecial("java/util/HashMap")
                         .astore(0);
             }
 
-            if(methods.size() > 0) {
+            if (methods.size() > 0) {
                 mw.new_("java/util/HashMap")
                         .dup()
                         .invokespecial("java/util/HashMap")
@@ -356,15 +359,15 @@ public class ReflectionVerifyAction extends Action {
                         .astore(2);
             }
 
-            for(Map.Entry<FieldNode, FieldReference> fieldEntry : fields) {
+            for (Map.Entry<FieldNode, FieldReference> fieldEntry : fields) {
                 //STORE FIELD INFO
                 mw.aload(0)
                         .ldc(encrypt(fieldEntry.getValue().oldName))
                         .ldc(fieldEntry.getValue().newName)
-                        .invokeinterface("java/util/Map","put","(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                        .invokeinterface("java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                         .pop();
             }
-            if(fields.size() > 0) {
+            if (fields.size() > 0) {
                 mw.getstatic(className, fieldMapName, fieldMapDesc)
                         .ldc(Type.getType("L" + entry.getValue().newName + ";"))
                         .aload(0)
@@ -373,7 +376,7 @@ public class ReflectionVerifyAction extends Action {
             }
 
 
-            for(Map.Entry<MethodNode, MethodReference> methodEntry : methods) {
+            for (Map.Entry<MethodNode, MethodReference> methodEntry : methods) {
                 mw.aload(2)
                         .ldc(encrypt(methodEntry.getValue().oldName))
                         .ldc(methodEntry.getValue().newName)
@@ -392,7 +395,7 @@ public class ReflectionVerifyAction extends Action {
                         .aastore()
                         .dup()
                         .iconst_1()
-                        .ldc(encrypt(methodEntry.getValue().oldDescriptor.substring(0,methodEntry.getValue().oldDescriptor.indexOf(')')+1)))
+                        .ldc(encrypt(methodEntry.getValue().oldDescriptor.substring(0, methodEntry.getValue().oldDescriptor.indexOf(')') + 1)))
                         .aastore()
                         //create first new array of obfuscated stuff
                         .iconst_2()
@@ -404,13 +407,13 @@ public class ReflectionVerifyAction extends Action {
                         .aastore()
                         .dup()
                         .iconst_1()
-                        .ldc(methodEntry.getValue().newDescriptor.substring(0,methodEntry.getValue().newDescriptor.indexOf(')')+1))
+                        .ldc(methodEntry.getValue().newDescriptor.substring(0, methodEntry.getValue().newDescriptor.indexOf(')') + 1))
                         .aastore()
-                        .invokeinterface("java/util/Map","put","(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                        .invokeinterface("java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                         .pop();
             }
 
-            if(methods.size() > 0) {
+            if (methods.size() > 0) {
                 mw.getstatic(className, methodDescMapName, methodDescMapDesc)
                         .ldc(Type.getType("L" + entry.getValue().newName + ";"))
                         .aload(1)
@@ -437,7 +440,7 @@ public class ReflectionVerifyAction extends Action {
 
 
         mw.label(l2)
-                .putstatic(className,opqPredName,opqPredDesc)
+                .putstatic(className, opqPredName, opqPredDesc)
                 .return_()
                 .localVar("", "L;", null, 0, 2, 0)
                 .localVar("", "L;", null, 0, 2, 1)
@@ -460,26 +463,26 @@ public class ReflectionVerifyAction extends Action {
                 .label(l0)
 
                 .ldc("SHA-256")
-                .invokestatic("java/security/MessageDigest","getInstance","(Ljava/lang/String;)Ljava/security/MessageDigest;")
+                .invokestatic("java/security/MessageDigest", "getInstance", "(Ljava/lang/String;)Ljava/security/MessageDigest;")
 
                 .aload(0)
                 .ldc("UTF-8")
-                .invokevirtual("java/lang/String","getBytes","(Ljava/lang/String;)[B")
-                .invokevirtual("java/security/MessageDigest","digest","([B)[B")
-                .invokestatic("javax/xml/bind/DatatypeConverter","printHexBinary","([B)Ljava/lang/String;")
+                .invokevirtual("java/lang/String", "getBytes", "(Ljava/lang/String;)[B")
+                .invokevirtual("java/security/MessageDigest", "digest", "([B)[B")
+                .invokestatic("javax/xml/bind/DatatypeConverter", "printHexBinary", "([B)Ljava/lang/String;")
 
                 .label(l1)
                 .areturn()
 
                 .label(l2)
-                .invokevirtual("java/lang/Exception","printStackTrace","()V")
+                .invokevirtual("java/lang/Exception", "printStackTrace", "()V")
 
                 .aconst_null()
                 .areturn()
 
-                .localVar("","L;",null,l0,l1,0)
+                .localVar("", "L;", null, l0, l1, 0)
 
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private void generateFieldAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
@@ -492,7 +495,7 @@ public class ReflectionVerifyAction extends Action {
                 .getstatic(className, mapName, mapDesc)
                 .aload(0)
                 .aconst_null()
-                .invokevirtual("java/util/HashMap","getOrDefault","(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                .invokevirtual("java/util/HashMap", "getOrDefault", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                 .astore(2)
 
                 .aload(2)
@@ -501,7 +504,7 @@ public class ReflectionVerifyAction extends Action {
                 .aload(2)
                 .checkcast("java/util/Map")
                 .aload(1)
-                .invokeinterface("java/util/Map","get","(Ljava/lang/Object;)Ljava/lang/Object;")
+                .invokeinterface("java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;")
                 .goto_(returnStatement)
 
                 .label(forLoopEnd)
@@ -511,11 +514,11 @@ public class ReflectionVerifyAction extends Action {
                 .checkcast("java/lang/String")
                 .areturn()
 
-                .localVar("","L;",null,beginMethod, returnStatement, 0)
-                .localVar("","L;",null,beginMethod, returnStatement, 1)
-                .localVar("","L;",null,beginMethod, returnStatement, 2)
+                .localVar("", "L;", null, beginMethod, returnStatement, 0)
+                .localVar("", "L;", null, beginMethod, returnStatement, 1)
+                .localVar("", "L;", null, beginMethod, returnStatement, 2)
 
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private void generateClassAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
@@ -527,12 +530,12 @@ public class ReflectionVerifyAction extends Action {
                 .label(l0)
                 .getstatic(className, mapName, mapDesc)
                 .aload(0)
-                .invokevirtual("java/util/HashMap","containsKey","(Ljava/lang/Object;)Z")
+                .invokevirtual("java/util/HashMap", "containsKey", "(Ljava/lang/Object;)Z")
                 .ifeq(l1)
 
                 .getstatic(className, mapName, mapDesc)
                 .aload(0)
-                .invokevirtual("java/util/HashMap","get","(Ljava/lang/Object;)Ljava/lang/Object;")
+                .invokevirtual("java/util/HashMap", "get", "(Ljava/lang/Object;)Ljava/lang/Object;")
                 .checkcast("java/lang/String")
                 .areturn()
 
@@ -541,9 +544,9 @@ public class ReflectionVerifyAction extends Action {
                 .areturn()
                 .label(l2)
 
-                .localVar("","L;",null,l0,l2,0)
+                .localVar("", "L;", null, l0, l2, 0)
 
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private void generateDescBuilder(ClassVisitor cw, String methodName, String methodDesc, String opqPredName, String opqPredDesc, String className) {
@@ -602,67 +605,67 @@ public class ReflectionVerifyAction extends Action {
                 .ifne(afterWhileLoop)
 
                 .aload(3)
-                .invokevirtual("java/lang/Class","isPrimitive","()Z")
+                .invokevirtual("java/lang/Class", "isPrimitive", "()Z")
                 .ifeq(afterIsPrimitveCheck)
 
                 //class is primitive
 
                 .aload(3)
-                .getstatic("java/lang/Integer","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Integer", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterIntClass)
                 .aload(4)
                 .bipush((byte) 'I')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
                 .label(afterIntClass)
 
                 .aload(3)
-                .getstatic("java/lang/Character","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Character", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterCharClass)
                 .aload(4)
                 .bipush((byte) 'C')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
                 .label(afterCharClass)
 
                 .aload(3)
-                .getstatic("java/lang/Double","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Double", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterDoubleClass)
                 .aload(4)
                 .bipush((byte) 'D')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
                 .label(afterDoubleClass)
 
                 .aload(3)
-                .getstatic("java/lang/Float","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Float", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterFloatClass)
                 .aload(4)
                 .bipush((byte) 'F')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
                 .label(afterFloatClass)
 
                 .aload(3)
-                .getstatic("java/lang/Long","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Long", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterLongClass)
                 .aload(4)
                 .bipush((byte) 'J')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
                 .label(afterLongClass)
 
                 .aload(3)
-                .getstatic("java/lang/Boolean","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Boolean", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterBoolClass)
                 .aload(4)
                 .bipush((byte) 'Z')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
 
 //                .getstatic(className, opqPredName, opqPredDesc)
@@ -672,11 +675,11 @@ public class ReflectionVerifyAction extends Action {
                 .label(afterBoolClass)
 
                 .aload(3)
-                .getstatic("java/lang/Short","TYPE","Ljava/lang/Class;")
+                .getstatic("java/lang/Short", "TYPE", "Ljava/lang/Class;")
                 .acmpNOTEQUAL(afterShortClass)
                 .aload(4)
                 .bipush((byte) 'S')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
                 .label(afterShortClass)
@@ -686,7 +689,7 @@ public class ReflectionVerifyAction extends Action {
 //                .acmpNOTEQUAL(afterByteClass)
                 .aload(4)
                 .bipush((byte) 'B')
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
                 .goto_(afterWhileLoop)
 //                .label(afterByteClass)
@@ -695,24 +698,24 @@ public class ReflectionVerifyAction extends Action {
 
                 .label(afterIsPrimitveCheck)
                 .aload(3)
-                .invokevirtual("java/lang/Class","isArray","()Z")
+                .invokevirtual("java/lang/Class", "isArray", "()Z")
                 .ifne(afterIsArrayCheck)
 
                 //class is a regular class
                 //buf.append("L").append(clas.getName().replace('.','/')).append(";");
                 .aload(4)
                 .bipush((byte) 76) //L
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
 
                 .aload(3)
-                .invokevirtual("java/lang/Class","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/Class", "getName", "()Ljava/lang/String;")
                 .bipush((byte) 46) // '.'
                 .bipush((byte) 47) // '/'
-                .invokevirtual("java/lang/String","replace","(CC)Ljava/lang/String;")
-                .invokevirtual("java/lang/StringBuilder","append","(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/String", "replace", "(CC)Ljava/lang/String;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
 
                 .bipush((byte) 59)
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
 
 
@@ -723,13 +726,13 @@ public class ReflectionVerifyAction extends Action {
 
                 //clas = clas.getComponentType();
                 .aload(3)
-                .invokevirtual("java/lang/Class","getComponentType","()Ljava/lang/Class;")
+                .invokevirtual("java/lang/Class", "getComponentType", "()Ljava/lang/Class;")
                 .astore(3)
 
                 //buf.append("[");
                 .aload(4)
                 .bipush((byte) 91) // [
-                .invokevirtual("java/lang/StringBuilder","append","(C)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(C)Ljava/lang/StringBuilder;")
                 .pop()
 
                 .goto_(whileLoopCheck)
@@ -741,8 +744,8 @@ public class ReflectionVerifyAction extends Action {
 
                 .aload(1)
                 .aload(4)
-                .invokevirtual("java/lang/StringBuilder","toString","()Ljava/lang/String;")
-                .invokevirtual("java/lang/StringBuilder","append","(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "toString", "()Ljava/lang/String;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
                 .pop()
 
                 .iinc(2, 1)
@@ -756,17 +759,17 @@ public class ReflectionVerifyAction extends Action {
 
                 .aload(1)
                 .ldc(")")
-                .invokevirtual("java/lang/StringBuilder","append","(Ljava/lang/String;)Ljava/lang/StringBuilder;")
-                .invokevirtual("java/lang/StringBuilder","toString","()Ljava/lang/String;")
+                .invokevirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+                .invokevirtual("java/lang/StringBuilder", "toString", "()Ljava/lang/String;")
                 .label(lastLabel)
                 .areturn()
 
-                .localVar("","L;",null,firstLabel, lastLabel, 0)
-                .localVar("","L;",null,firstLabel, lastLabel, 1)
-                .localVar("","L;",null,firstLabel, lastLabel, 2)
-                .localVar("","L;",null,firstLabel, lastLabel, 3)
-                .localVar("","L;",null,firstLabel, lastLabel, 4)
-                .localVar("","L;",null,firstLabel, lastLabel, 5)
+                .localVar("", "L;", null, firstLabel, lastLabel, 0)
+                .localVar("", "L;", null, firstLabel, lastLabel, 1)
+                .localVar("", "L;", null, firstLabel, lastLabel, 2)
+                .localVar("", "L;", null, firstLabel, lastLabel, 3)
+                .localVar("", "L;", null, firstLabel, lastLabel, 4)
+                .localVar("", "L;", null, firstLabel, lastLabel, 5)
 
                 .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
         Type.getDescriptor(int[].class);
@@ -781,7 +784,7 @@ public class ReflectionVerifyAction extends Action {
 
         mw.label(beginMethod)
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Field","getDeclaringClass","()Ljava/lang/Class;")
+                .invokevirtual("java/lang/reflect/Field", "getDeclaringClass", "()Ljava/lang/Class;")
                 .astore(1)
 
                 .getstatic(className, mapName, mapDesc)
@@ -794,14 +797,14 @@ public class ReflectionVerifyAction extends Action {
                 .ifnonnnull(doesContainKey)
 
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/reflect/Field", "getName", "()Ljava/lang/String;")
                 .areturn()
 
                 .label(doesContainKey)
                 .aload(2)
                 .checkcast("java/util/Map")
-                .invokeinterface("java/util/Map","entrySet","()Ljava/util/Set;")
-                .invokeinterface("java/util/Set","toArray","()[Ljava/lang/Object;")
+                .invokeinterface("java/util/Map", "entrySet", "()Ljava/util/Set;")
+                .invokeinterface("java/util/Set", "toArray", "()[Ljava/lang/Object;")
                 .astore(3)
 
                 .iconst_0()
@@ -820,15 +823,15 @@ public class ReflectionVerifyAction extends Action {
                 .astore(5)
 
                 .aload(5)
-                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getValue", "()Ljava/lang/Object;")
                 .checkcast("java/lang/String")
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
-                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .invokevirtual("java/lang/reflect/Field", "getName", "()Ljava/lang/String;")
+                .invokevirtual("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
                 .ifeq(continueBranch)
 
                 .aload(5)
-                .invokeinterface("java/util/Map$Entry","getKey","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getKey", "()Ljava/lang/Object;")
                 .checkcast("java/lang/String")
                 .areturn()
 
@@ -838,19 +841,19 @@ public class ReflectionVerifyAction extends Action {
                 .label(afterForLoop)
 
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Field","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/reflect/Field", "getName", "()Ljava/lang/String;")
 
                 .label(returnStatement)
                 .areturn()
 
-                .localVar("","L;",null,beginMethod, returnStatement, 0)
-                .localVar("","L;",null,beginMethod, returnStatement, 1)
-                .localVar("","L;",null,beginMethod, returnStatement, 2)
-                .localVar("","L;",null,beginMethod, returnStatement, 3)
-                .localVar("","L;",null,beginMethod, returnStatement, 4)
-                .localVar("","L;",null,beginMethod, returnStatement, 5)
+                .localVar("", "L;", null, beginMethod, returnStatement, 0)
+                .localVar("", "L;", null, beginMethod, returnStatement, 1)
+                .localVar("", "L;", null, beginMethod, returnStatement, 2)
+                .localVar("", "L;", null, beginMethod, returnStatement, 3)
+                .localVar("", "L;", null, beginMethod, returnStatement, 4)
+                .localVar("", "L;", null, beginMethod, returnStatement, 5)
 
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private void generateMethodNameBackwardAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
@@ -862,7 +865,7 @@ public class ReflectionVerifyAction extends Action {
 
         mw.label(beginMethod)
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Method","getDeclaringClass","()Ljava/lang/Class;")
+                .invokevirtual("java/lang/reflect/Method", "getDeclaringClass", "()Ljava/lang/Class;")
                 .astore(1)
 
                 .getstatic(className, mapName, mapDesc)
@@ -875,19 +878,19 @@ public class ReflectionVerifyAction extends Action {
                 .ifnonnnull(doesContainKey)
 
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Method","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/reflect/Method", "getName", "()Ljava/lang/String;")
                 .areturn()
 
                 .label(doesContainKey)
 
                 .aload(2)
                 .checkcast("java/util/Map")
-                .invokeinterface("java/util/Map","entrySet","()Ljava/util/Set;")
-                .invokeinterface("java/util/Set","toArray","()[Ljava/lang/Object;")
+                .invokeinterface("java/util/Map", "entrySet", "()Ljava/util/Set;")
+                .invokeinterface("java/util/Set", "toArray", "()[Ljava/lang/Object;")
                 .astore(3)
 
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Method","getParameterTypes","()[Ljava/lang/Class;")
+                .invokevirtual("java/lang/reflect/Method", "getParameterTypes", "()[Ljava/lang/Class;")
                 .invokestatic(className, descBuilderName, descBuilderDesc)
                 .astore(6)
 
@@ -907,26 +910,26 @@ public class ReflectionVerifyAction extends Action {
                 .astore(5)
 
                 .aload(5)
-                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getValue", "()Ljava/lang/Object;")
                 .checkcast("[Ljava/lang/String;")
                 .iconst_0()
                 .aaload()
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Method","getName","()Ljava/lang/String;")
-                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .invokevirtual("java/lang/reflect/Method", "getName", "()Ljava/lang/String;")
+                .invokevirtual("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
                 .ifeq(continueBranch)
 
                 .aload(5)
-                .invokeinterface("java/util/Map$Entry","getValue","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getValue", "()Ljava/lang/Object;")
                 .checkcast("[Ljava/lang/String;")
                 .iconst_1()
                 .aaload()
                 .aload(6)
-                .invokevirtual("java/lang/String","equals","(Ljava/lang/Object;)Z")
+                .invokevirtual("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
                 .ifeq(continueBranch)
 
                 .aload(5)
-                .invokeinterface("java/util/Map$Entry","getKey","()Ljava/lang/Object;")
+                .invokeinterface("java/util/Map$Entry", "getKey", "()Ljava/lang/Object;")
                 .checkcast("[Ljava/lang/String;")
                 .iconst_0()
                 .aaload()
@@ -938,7 +941,7 @@ public class ReflectionVerifyAction extends Action {
                 .label(afterForLoop)
 
                 .aload(0)
-                .invokevirtual("java/lang/reflect/Method","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/reflect/Method", "getName", "()Ljava/lang/String;")
 
                 .label(returnStatement)
                 .areturn()
@@ -950,7 +953,7 @@ public class ReflectionVerifyAction extends Action {
 //                .localVar("","L;",null,beginMethod, returnStatement, 4)
 //                .localVar("","L;",null,beginMethod, returnStatement, 5)
 
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private void generateClassNameBackwardAccessor(ClassVisitor cw, String methodName, String methodDesc, String className, String mapName, String mapDesc) {
@@ -958,14 +961,14 @@ public class ReflectionVerifyAction extends Action {
                 .getstatic(className, mapName, mapDesc)
 
                 .aload(0)
-                .invokevirtual("java/lang/Class","getName","()Ljava/lang/String;")
+                .invokevirtual("java/lang/Class", "getName", "()Ljava/lang/String;")
                 .aload(0)
-                .invokevirtual("java/lang/Class","getName","()Ljava/lang/String;")
-                .invokeinterface("java/util/Map","getOrDefault","(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+                .invokevirtual("java/lang/Class", "getName", "()Ljava/lang/String;")
+                .invokeinterface("java/util/Map", "getOrDefault", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                 .checkcast("java/lang/String")
 
                 .areturn()
-                .writeMethod(cw, ACC_PUBLIC+ACC_STATIC, methodName, methodDesc, null, null);
+                .writeMethod(cw, ACC_PUBLIC + ACC_STATIC, methodName, methodDesc, null, null);
     }
 
     private ClassNode generateClass() {
@@ -973,7 +976,7 @@ public class ReflectionVerifyAction extends Action {
         ClassNode cw = new ClassNode();
 
         cw.visit(52, ACC_PUBLIC + ACC_SUPER, className, null, "java/lang/Object", null);
-        cw.visitSource("maps.java",null);
+        cw.visitSource("maps.java", null);
 
         String fieldMapName = "a",
                 fieldMapDesc = "Ljava/util/HashMap;";
@@ -1009,9 +1012,9 @@ public class ReflectionVerifyAction extends Action {
 
         generateDescBuilder(cw, descBuilderName = "frog", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
 
-        generateFieldNameBackwardAccessor(cw,unmapFieldNameBackwardName = "unmapFieldnameBackward", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
+        generateFieldNameBackwardAccessor(cw, unmapFieldNameBackwardName = "unmapFieldnameBackward", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
         generateMethodNameBackwardAccessor(cw, unmapMethodNameBackwardName = "unmapMethodnameBackward", unmapMethodNameBackwardDesc = "(Ljava/lang/reflect/Method;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc);
-        generateClassNameBackwardAccessor(cw, unmapClassNameBackwardName = "unmapClassnameBakward",unmapClassNameBackwardDesc = "(Ljava/lang/Class;)Ljava/lang/String;", className, classMapName, classMapDesc);
+        generateClassNameBackwardAccessor(cw, unmapClassNameBackwardName = "unmapClassnameBakward", unmapClassNameBackwardDesc = "(Ljava/lang/Class;)Ljava/lang/String;", className, classMapName, classMapDesc);
 
 //        generateFieldAccessor(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
 //        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");

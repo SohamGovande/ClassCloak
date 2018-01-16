@@ -1,6 +1,6 @@
 package me.matrix4f.classcloak.util.interpreter;
 
-import jdk.internal.org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import me.matrix4f.classcloak.util.BytecodeUtils;
 import me.matrix4f.classcloak.util.interpreter.ObjectType.C;
 import org.objectweb.asm.Type;
