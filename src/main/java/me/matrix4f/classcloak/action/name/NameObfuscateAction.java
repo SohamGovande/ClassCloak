@@ -26,8 +26,6 @@ public class NameObfuscateAction extends Action implements Globals {
         this.classNodes = ObfGlobal.sourceClasses;
         LOGGER.info("Performing name obfuscation.");
 
-        NameObfMap.takePreSnapshot();
-
         String mainClass = manifest == null ? "" : //will result to it being ignored
                 manifest.getMainAttributes()
                         .entrySet()
@@ -45,29 +43,20 @@ public class NameObfuscateAction extends Action implements Globals {
             MethodNameCreator mnc = MethodNameCreator.openClass(classNode);
             FieldNameCreator fnc = FieldNameCreator.openClass(classNode);
 
-            classNode.methods
-                    .stream()
-                    .filter(method-> method.name.charAt(0) != '<')
-                    .forEach(method -> {
-                        if(obfSettings.shouldExclude(method, classNode))
-                            return;
-
-                        //is main method
-                        if(!(isMainClass && method.access == ACC_PUBLIC+ACC_STATIC && method.name.equals("main") && method.desc.equals("([Ljava/lang/String;)V"))) {
-                            String newname = mnc.getName(method, false);
-                            remapper.changeMethodName(ObfGlobal.nameSettings.exclusions, classNode, method, newname);
-                        }
-
-                        if(method.localVariables != null) { //interfaces have null local vars
-                            method.localVariables.forEach(var -> var.name = "");
-                        }
-                    });
+            classNode.methods.forEach(method -> {
+                boolean isMainMethod = isMainClass && method.access == ACC_PUBLIC+ACC_STATIC && method.name.equals("main") && method.desc.equals("([Ljava/lang/String;)V");
+                boolean isExplicitlyExcluded = obfSettings.shouldExclude(method, classNode);
+                boolean isUnrenamable = method.name.charAt(0) == '<';
+                boolean canRename = !isMainMethod && !isUnrenamable && !isExplicitlyExcluded;
+                //is main method
+                if(canRename)
+                    remapper.changeMethodName(ObfGlobal.nameSettings.exclusions, classNode, method, mnc.getName(method, false));
+            });
 
             classNode.fields.forEach(field -> {
                 if(obfSettings.shouldExclude(field, classNode))
                     return;
-                String newname = fnc.getName(field, false);
-                remapper.changeFieldName(classNode, field, newname);
+                remapper.changeFieldName(classNode, field, fnc.getName(field, false));
             });
 
             if(!isMainClass && !obfSettings.shouldExclude(classNode)) {
@@ -75,19 +64,6 @@ public class NameObfuscateAction extends Action implements Globals {
                 remapper.changeClassName(classNode.name, classref.newName);
             }
         });
-
-        for(int i = 0; i < classNodes.size(); i++) {
-            ClassNode classNode = classNodes.get(i);
-            boolean isMainClass = classNode.name.equals(mainClass);
-            for(int j = 0; j < classNodes.get(i).methods.size(); j++) {
-                MethodNode method = classNodes.get(i).methods.get(j);
-
-                //is main method
-                if(isMainClass && method.access == ACC_PUBLIC+ACC_STATIC && method.name.equals("main") && method.desc.equals("([Ljava/lang/String;)V")) {
-                }
-            }
-        }
-
         NameObfMap.takePostSnapshot();
     }
 

@@ -9,6 +9,9 @@ import org.w3c.dom.NodeList;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class XMLUtils {
@@ -79,5 +82,25 @@ public class XMLUtils {
         if(list.size() == 0)
             throw new CommandException("Command " + command.getName() + ": No string found by tag name " + name );
         return list;
+    }
+
+    public static Stream<Element> elements(NodeList nodeList) {
+        return stream(nodeList)
+                .filter(node -> node instanceof Element)
+                .map(node -> (Element) node);
+    }
+
+    public static Stream<Element> elementsWithTagName(NodeList list, String tagName) {
+        return elements(list)
+                .filter(element -> element.getTagName().equals(tagName));
+    }
+
+    public static Optional<Element> firstElement(NodeList list, String tagName, boolean require, Command command) throws CommandException {
+        Optional<Element> first = elements(list)
+                .filter(node -> node.getTagName().equals(tagName))
+                .findFirst();
+        if(!first.isPresent() && require)
+            throw new CommandException(command, "No element " + tagName + " found.");
+        return first;
     }
 }

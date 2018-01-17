@@ -2,6 +2,7 @@ package me.matrix4f.classcloak.action;
 
 import me.matrix4f.classcloak.Action;
 import me.matrix4f.classcloak.JarFileEntry;
+import me.matrix4f.classcloak.action.name.map.NameObfMap;
 import me.matrix4f.classcloak.classreading.CstPoolReader;
 import me.matrix4f.classcloak.classreading.cp.*;
 import me.matrix4f.classcloak.util.BytecodeUtils;
@@ -101,6 +102,8 @@ public class LoadNecessaryClassesAction extends Action {
 //                LOGGER.fatal("No class found by name " + className + ".");
             }
         }
+
+        NameObfMap.takePreSnapshot();
 
     }
 }

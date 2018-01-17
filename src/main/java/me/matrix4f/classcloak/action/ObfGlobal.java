@@ -12,7 +12,7 @@ import java.util.jar.Manifest;
 
 public class ObfGlobal {
 
-    public static final ObfSettings nameSettings = new ObfSettings();
+    public static final ObfSettings.NameSettings nameSettings = new ObfSettings.NameSettings();
     public static final ObfSettings.StringObfSettings stringSettings = new ObfSettings.StringObfSettings();
     public static final ObfSettings.LineObfSettings lineSettings = new ObfSettings.LineObfSettings();
     public static final ObfSettings.ReflectionHandlingSettings reflectionSettings = new ObfSettings.ReflectionHandlingSettings();

@@ -1,5 +1,7 @@
 package me.matrix4f.classcloak.action.name.creation;
 
+import me.matrix4f.classcloak.action.ObfGlobal;
+import me.matrix4f.classcloak.action.ObfSettings;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 
@@ -34,27 +36,32 @@ public class FieldNameCreator {
         String[] name = {dictionary.get(0)};
         int tries = 1;
         String append = "";
-        while(fieldNameMap.values()
+        ObfSettings.NameSettings nameSettings = ObfGlobal.nameSettings;
+        while (fieldNameMap.entrySet()
                 .stream()
-                .anyMatch(s-> s[1].equals(name[0])))
-        {
-            if(tries >= dictionary.size()) {
+                .anyMatch(entry -> {
+                    FieldNode fieldNode = entry.getKey();
+                    String[] s = entry.getValue();
+                    return s[1].equals(name[0]) && (!nameSettings.overloadFields || fieldNode.desc.equals(node.desc));
+                })) {
+
+            if (tries >= dictionary.size()) {
                 append = Integer.toString((tries / dictionary.size()) - 1); //sub 1 so that 0 is included in the match
             }
             int dictIndex = tries % dictionary.size();
             name[0] = dictionary.get(dictIndex) + append;
             tries++;
         }
-        if(!silent)
-            fieldNameMap.put(node, new String[] { node.name, name[0] });
+        if (!silent)
+            fieldNameMap.put(node, new String[]{node.name, name[0]});
         return name[0];
     }
 
     private String retrieveNextFromDictionary() {
-        int repitions = index/dictionary.size();
+        int repitions = index / dictionary.size();
         String s = dictionary.get(index);
         index++;
-        return s + (repitions==0 ?"":repitions);
+        return s + (repitions == 0 ? "" : repitions);
     }
 
     public HashMap<FieldNode, String[]> getFieldNameMap() {

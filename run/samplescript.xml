@@ -8,7 +8,10 @@
 
     <obfuscate>
         <name>
-
+            <overloading>
+                <fields/>
+                <methods option="advanced"/>
+            </overloading>
         </name>
         <reflectionHandling>
             <include>*</include>

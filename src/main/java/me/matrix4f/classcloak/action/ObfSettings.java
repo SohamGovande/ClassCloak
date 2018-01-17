@@ -44,4 +44,11 @@ public class ObfSettings {
                     .count() > 0;
         }
     }
+
+    public static class NameSettings extends ObfSettings {
+        public static final int NONE = 0, SIMPLE = 1, ADVANCED = 2;
+        public static final String[] METHOD_OVERLOADING = {"none","simple","advanced"};
+        public boolean overloadFields = false;
+        public int overloadMethods = SIMPLE;
+    }
 }

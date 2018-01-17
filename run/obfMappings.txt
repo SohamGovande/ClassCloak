@@ -2,29 +2,28 @@
 
 me.matrix4f.test.ComponentBuilder -> b
   Fields:
+    javax.swing.JButton btn -> javax.swing.JButton a
     javax.swing.JLabel lbl -> javax.swing.JLabel a
-    javax.swing.JButton btn -> javax.swing.JButton b
-    javax.swing.JTextArea textArea -> javax.swing.JTextArea c
+    javax.swing.JTextArea textArea -> javax.swing.JTextArea a
   Methods:
     void <init>() -> ~Same~
     void buildButton() -> void b()
     void buildLabel() -> void a()
     void buildTextArea() -> void c()
-    javax.swing.JButton getBtn() -> javax.swing.JButton e()
-    javax.swing.JLabel getLbl() -> javax.swing.JLabel d()
-    javax.swing.JTextArea getTextArea() -> javax.swing.JTextArea f()
+    javax.swing.JButton getBtn() -> javax.swing.JButton a()
+    javax.swing.JLabel getLbl() -> javax.swing.JLabel a()
+    javax.swing.JTextArea getTextArea() -> javax.swing.JTextArea a()
 
-me.matrix4f.test.Main -> ~Same~
-  Fields:
-    java.lang.String data -> java.lang.String b
-    int asdf -> int a
+me.matrix4f.test.CRTest -> c
   Methods:
-    void <clinit>() -> ~Same~
     void <init>() -> ~Same~
-    void add(int, int) -> void a(int, int)
+    void bobRoss() -> void a()
+    java.lang.Object call() -> ~Same~
+    void run() -> ~Same~
+
+me.matrix4f.test.IBobRoss -> d
+  Methods:
     javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
-    void main(java.lang.String[]) -> ~Same~
-    void test(int, short, char, long, byte, float, double, boolean, java.lang.Object, java.lang.String) -> void b(int, short, char, long, byte, float, double, boolean, java.lang.Object, java.lang.String)
 
 me.matrix4f.test.asdfross -> a
   Fields:
@@ -37,10 +36,6 @@ me.matrix4f.test.asdfross -> a
     javax.swing.JLabel bob4(javax.swing.JLabel) -> javax.swing.JLabel e(javax.swing.JLabel)
     javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
 
-me.matrix4f.test.IBobRoss -> d
-  Methods:
-    javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
-
 me.matrix4f.test.Win -> e
   Fields:
     javax.swing.JFrame frame -> javax.swing.JFrame a
@@ -48,10 +43,18 @@ me.matrix4f.test.Win -> e
     void <init>() -> ~Same~
     javax.swing.JFrame getFrame() -> javax.swing.JFrame a()
 
-me.matrix4f.test.CRTest -> c
+me.matrix4f.test.Main -> ~Same~
+  Fields:
+    java.lang.String data -> java.lang.String a
+    int asdf -> int a
   Methods:
+    void <clinit>() -> ~Same~
     void <init>() -> ~Same~
-    void bobRoss() -> void a()
-    java.lang.Object call() -> ~Same~
-    void run() -> ~Same~
+    void add(int, int) -> void a(int, int)
+    javax.swing.JLabel get(javax.swing.JLabel) -> javax.swing.JLabel f(javax.swing.JLabel)
+    void main(java.lang.String[]) -> ~Same~
+    int sub(int, int) -> int b(int, int)
+    int subtract(int, int) -> int a(int, int)
+    void subtractStuff(int, int) -> void b(int, int)
+    void test(int, short, char, long, byte, float, double, boolean, java.lang.Object, java.lang.String) -> void a(int, short, char, long, byte, float, double, boolean, java.lang.Object, java.lang.String)
 

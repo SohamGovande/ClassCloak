@@ -1,5 +1,9 @@
 package me.matrix4f.classcloak.action.name.creation;
 
+import jdk.internal.org.objectweb.asm.Type;
+import me.matrix4f.classcloak.action.ObfGlobal;
+import me.matrix4f.classcloak.action.ObfSettings;
+import me.matrix4f.classcloak.action.ObfSettings.NameSettings;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
@@ -31,12 +35,26 @@ public class MethodNameCreator {
     }
 
     public String getName(MethodNode node, boolean silent) {
+        String nodeArgsDesc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(node.desc));
         String[] name = {dictionary.get(0)};
         int tries = 1;
         String append = "";
-        while(methodNameMap.values()
+        while(methodNameMap.entrySet()
                 .stream()
-                .anyMatch(s -> s[1].equals(name[0])))
+                .anyMatch(entry -> {
+                    String[] s = entry.getValue();
+                    MethodNode method = entry.getKey();
+                    String currentArgsDesc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(method.desc));
+                    switch (ObfGlobal.nameSettings.overloadMethods) {
+                        case NameSettings.NONE:
+                            return s[1].equals(name[0]);
+                        case NameSettings.SIMPLE:
+                            return currentArgsDesc.equals(nodeArgsDesc) && s[1].equals(name[0]);
+                        case NameSettings.ADVANCED:
+                            return method.desc.equals(node.desc) && s[1].equals(name[0]);
+                    }
+                    return true;
+                }))
         {
             if(tries >= dictionary.size()) {
                 append = Integer.toString((tries / dictionary.size()) - 1); //sub 1 so that 0 is included in the match
