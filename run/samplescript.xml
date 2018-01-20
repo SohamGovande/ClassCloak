@@ -7,6 +7,11 @@
     </classpath>
 
     <obfuscate>
+        <debugInfo>
+            <localVars action="makeEmpty"/>
+            <lineNumbers action="scramble" password="bobRoss"/>
+            <sourceFiles action="delete"/>
+        </debugInfo>
         <name>
             <overloading>
                 <fields/>

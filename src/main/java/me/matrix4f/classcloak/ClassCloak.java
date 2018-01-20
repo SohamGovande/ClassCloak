@@ -28,9 +28,9 @@ public class ClassCloak {
     public static List<Action> actions = new ArrayList<>();
 
     public static void main(String[] args) {
-        Logger.printLogo();
 //        if(1 == 1)
 //            return;
+        Logger.printLogo();
 
         OptionParser parser = new OptionParser();
         OptionSpec<String> scriptPathOption = parser.accepts("script").withRequiredArg();

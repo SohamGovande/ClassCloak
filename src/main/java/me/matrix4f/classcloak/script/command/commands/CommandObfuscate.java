@@ -1,7 +1,8 @@
 package me.matrix4f.classcloak.script.command.commands;
 
-import me.matrix4f.classcloak.action.LineNumberObfuscateAction;
-import me.matrix4f.classcloak.action.ObfSettings.NameSettings;
+import me.matrix4f.classcloak.ClassCloak;
+import me.matrix4f.classcloak.action.DebugObfuscateAction;
+import me.matrix4f.classcloak.action.ObfSettings.*;
 import me.matrix4f.classcloak.action.name.NameObfuscateAction;
 import me.matrix4f.classcloak.action.reflection.ReflectionEntry;
 import me.matrix4f.classcloak.action.reflection.ReflectionMethodMap;
@@ -22,8 +23,6 @@ import java.util.stream.Collectors;
 
 import static me.matrix4f.classcloak.ClassCloak.*;
 import static me.matrix4f.classcloak.action.ObfGlobal.*;
-import static me.matrix4f.classcloak.action.ObfSettings.LineObfSettings;
-import static me.matrix4f.classcloak.action.ObfSettings.StringObfSettings;
 import static me.matrix4f.classcloak.action.reflection.ReflectionMethodMap.*;
 
 public class CommandObfuscate extends Command {
@@ -41,6 +40,31 @@ public class CommandObfuscate extends Command {
             Element currentChild = (Element) args.item(j);
             NodeList children = currentChild.getChildNodes();
             switch (currentChild.getTagName()) {
+                case "debugInfo": {
+                    Optional<Element> localVarElement = XMLUtils.firstElement(children, "localVars",false,this);
+                    if(localVarElement.isPresent()) {
+                        Element localVar = localVarElement.get();
+                        String action = XMLUtils.getAttribute(localVar, "action", this);
+                        debugSettings.localVarAction = CmdHelper.parseEnum(this, DebugSettings.LOCALVARS, "action", action);
+                    }
+
+                    Optional<Element> lineNumberElement = XMLUtils.firstElement(children, "lineNumbers",false,this);
+                    if(lineNumberElement.isPresent()) {
+                        Element lineNumbers = lineNumberElement.get();
+                        String action = XMLUtils.getAttribute(lineNumbers, "action", this);
+                        debugSettings.lineNumberPwd = XMLUtils.getAttribute(lineNumbers, "password", this);
+                        debugSettings.lineNumberAction = CmdHelper.parseEnum(this, DebugSettings.LINENUMBERS, "action", action);
+                    }
+
+                    Optional<Element> sourceFileElement = XMLUtils.firstElement(children, "sourceFiles",false,this);
+                    if(sourceFileElement.isPresent()) {
+                        Element sourceFiles = sourceFileElement.get();
+                        String action = XMLUtils.getAttribute(sourceFiles, "action", this);
+                        debugSettings.sourceAction = CmdHelper.parseEnum(this, DebugSettings.SOURCE, "action", action);
+                    }
+                    actions.add(new DebugObfuscateAction());
+                    break;
+                }
                 case "name": {
                     nameSettings.exclusions = CmdHelper.parseExclusionsFrom(this, children);
                     Optional<Element> overloadingOptional = XMLUtils.firstElement(children, "overloading", false, this);
@@ -50,9 +74,8 @@ public class CommandObfuscate extends Command {
                                 .findFirst();
                         if (methodOptional.isPresent()) {
                             Element methodOverloading = methodOptional.get();
-                            if (!methodOverloading.hasAttribute("option"))
-                                throw new CommandException(this, "Overloading methods requires an attribute 'option'.");
-                            nameSettings.overloadMethods = CmdHelper.parseEnum(this, NameSettings.METHOD_OVERLOADING, "option", methodOverloading.getAttribute("option"));
+                            String option = XMLUtils.getAttribute(methodOverloading, "option", this);
+                            nameSettings.overloadMethods = CmdHelper.parseEnum(this, NameSettings.METHOD_OVERLOADING, "option", option);
                         }
                         XMLUtils.elementsWithTagName(overloadingSettings.getChildNodes(), "fields")
                                 .findFirst()
@@ -67,14 +90,6 @@ public class CommandObfuscate extends Command {
                     String method = XMLUtils.findString(this, children, "method").get(0);
                     stringSettings.obfMethod = CmdHelper.parseEnum(this, StringObfSettings.METHOD_LIST, "method", method);
                     actions.add(new StringObfuscateAction());
-                    break;
-                }
-                case "lineNumbers": {
-                    lineSettings.exclusions = CmdHelper.parseExclusionsFrom(this, children);
-
-                    String modify = XMLUtils.findString(this, children, "modify").get(0);
-                    lineSettings.obfMethod = CmdHelper.parseEnum(this, LineObfSettings.METHOD_LIST, "modify", modify);
-                    actions.add(new LineNumberObfuscateAction());
                     break;
                 }
                 case "reflectionHandling": {

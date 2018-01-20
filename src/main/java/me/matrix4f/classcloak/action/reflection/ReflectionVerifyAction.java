@@ -28,7 +28,6 @@ import static me.matrix4f.classcloak.action.ObfGlobal.reflectionSettings;
 /**
  * Maps certain things into a class and retrieves those values at runtime
  */
-//todo
 public class ReflectionVerifyAction extends Action {
 
 //    private static final boolean USE_HASH = false;
@@ -1006,15 +1005,15 @@ public class ReflectionVerifyAction extends Action {
 
         generateClinit(cw, className, fieldMapName, fieldMapDesc, methodDescMapName, methodDescMapDesc, methodMapName, methodMapDesc, classMapName, classMapDesc, opqPredName, opqPredDesc);
 
-        generateFieldAccessor(cw, unmapFieldName = "discordapp", unmapFieldDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
-        generateMethodAccessor(cw, unmapMethodDescName = "dubmo", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
-        generateClassAccessor(cw, unmapClassName = "princess", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
+        generateFieldAccessor(cw, unmapFieldName = "a", unmapFieldDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
+        generateMethodAccessor(cw, unmapMethodDescName = "a", unmapMethodDescDesc = "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc, opqPredName, opqPredDesc);
+        generateClassAccessor(cw, unmapClassName = "a", unmapClassDesc = "(Ljava/lang/String;)Ljava/lang/String;", className, classMapName, classMapDesc);
 
-        generateDescBuilder(cw, descBuilderName = "frog", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
+        generateDescBuilder(cw, descBuilderName = "a", descBuilderDesc = "([Ljava/lang/Class;)Ljava/lang/String;", opqPredName, opqPredDesc, className);
 
-        generateFieldNameBackwardAccessor(cw, unmapFieldNameBackwardName = "unmapFieldnameBackward", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
-        generateMethodNameBackwardAccessor(cw, unmapMethodNameBackwardName = "unmapMethodnameBackward", unmapMethodNameBackwardDesc = "(Ljava/lang/reflect/Method;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc);
-        generateClassNameBackwardAccessor(cw, unmapClassNameBackwardName = "unmapClassnameBakward", unmapClassNameBackwardDesc = "(Ljava/lang/Class;)Ljava/lang/String;", className, classMapName, classMapDesc);
+        generateFieldNameBackwardAccessor(cw, unmapFieldNameBackwardName = "a", unmapFieldNameBackwardDesc = "(Ljava/lang/reflect/Field;)Ljava/lang/String;", className, fieldMapName, fieldMapDesc);
+        generateMethodNameBackwardAccessor(cw, unmapMethodNameBackwardName = "a", unmapMethodNameBackwardDesc = "(Ljava/lang/reflect/Method;)Ljava/lang/String;", className, methodDescMapName, methodDescMapDesc);
+        generateClassNameBackwardAccessor(cw, unmapClassNameBackwardName = "a", unmapClassNameBackwardDesc = "(Ljava/lang/Class;)Ljava/lang/String;", className, classMapName, classMapDesc);
 
 //        generateFieldAccessor(cw, unmapMethodNameName = "b", unmapMethodNameDesc = "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String;", className, methodMapName, methodMapDesc, opqPredName, opqPredDesc);
 //        generateHashFunction(cw, hashMethodName = "a", hashMethodDesc = "(Ljava/lang/String;)Ljava/lang/String;");

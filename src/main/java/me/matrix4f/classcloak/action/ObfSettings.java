@@ -26,13 +26,6 @@ public class ObfSettings {
         public int obfMethod = 0;
     }
 
-    public static class LineObfSettings extends ObfSettings {
-        public static final int DELETE = 0, SCRAMBLE = 1, RANDOM = 2, SINGLE = 3;
-        public static final String[] METHOD_LIST = {"delete","scramble","random","single"};
-
-        public int obfMethod = 0;
-    }
-
     public static class ReflectionHandlingSettings {
         public List<NodeTarget> inclusions = new ArrayList<>();
 //        public String hashFunction = "SHA-256";
@@ -50,5 +43,20 @@ public class ObfSettings {
         public static final String[] METHOD_OVERLOADING = {"none","simple","advanced"};
         public boolean overloadFields = false;
         public int overloadMethods = SIMPLE;
+    }
+
+    public static class DebugSettings {
+        public static final int DESTROYVARS = 0, CLEARVARS = 1, KEEPVARS = 2;
+        public static final String[] LOCALVARS = {"destroy","makeEmpty","keep"};
+        public int localVarAction = -1;
+
+        public static final int KEEPLINES = 0, DELETELINES = 1, ZEROIFYLINES = 2, SCRAMBLELINES = 3;
+        public static final String[] LINENUMBERS = {"keep","delete","zeroify","scramble"};
+        public int lineNumberAction = -1;
+        public String lineNumberPwd = "";
+
+        public static final int KEEPSOURCE = 0, DELETESOURCE = 1;
+        public static final String[] SOURCE = {"keep","delete"};
+        public int sourceAction = -1;
     }
 }

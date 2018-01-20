@@ -95,6 +95,12 @@ public class XMLUtils {
                 .filter(element -> element.getTagName().equals(tagName));
     }
 
+    public static String getAttribute(Element element, String name, Command command) throws CommandException {
+        if(element.hasAttribute(name))
+            return element.getAttribute(name);
+        throw new CommandException(command, "No attribute " + name + " specified for " + element.getTagName());
+    }
+
     public static Optional<Element> firstElement(NodeList list, String tagName, boolean require, Command command) throws CommandException {
         Optional<Element> first = elements(list)
                 .filter(node -> node.getTagName().equals(tagName))
