@@ -26,6 +26,7 @@ Once this has been done, ClassCloak utilizes a powerful bytecode library called 
 Lastly, your JAR is saved into an exported JAR archive, in which you can find your obfuscated program!
 
 **Features**
+
 Current features:
 - A heavy-duty scripting language that allows you to concisely express basic tasks, yet unfolds to allow for much more!
 - Support for name obfuscation (changes your class, field, and method names to meaningless ones)
