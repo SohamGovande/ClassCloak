@@ -1,8 +1,8 @@
-## ClassCloak: a free, open-source obfuscator for Java bytecode
+# ClassCloak: a free, open-source obfuscator for Java bytecode
 
 ClassCloak aims to be the best free, robust, and powerful obfuscator for your Java programs.
 
-# The Why
+## The Why
 
 Why put your code through a Java obfuscator? Can't you distribute your software as-is?
 
@@ -18,14 +18,14 @@ Advanced Java Obfuscators such as ClassCloak perform a multtifaceted approach in
 
 What's more, ClassCloak is completely free to use, for people like you!
 
-# The How
+## The How
 
 First, ClassCloak scans a script file to determine which actions you wish to perform on your input program.
 Next, our engine decompiles your Java JAR program class by class, retrieving bytecode information from the classes.
 Once this has been done, ClassCloak utilizes a powerful bytecode library called ASM along with a StackInstructionHelper. All bytecode transformations are now applied to your class bytecode.
 Lastly, your JAR is saved into an exported JAR archive, in which you can find your obfuscated program!
 
-# Features
+## Features
 
 Current features:
 - A heavy-duty scripting language that allows you to concisely express basic tasks, yet unfolds to allow for much more!
