@@ -1,6 +1,6 @@
 ## ClassCloak: a free, open-source obfuscator for Java bytecode
 
-ClassCloak aims to be the best free, robust, yet powerful obfuscator for your Java programs.
+ClassCloak aims to be the best free, robust, and powerful obfuscator for your Java programs.
 
 # The Why
 
